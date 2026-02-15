@@ -23,6 +23,7 @@ export class AudioEngine {
   private playbackGains: GainNode[] = []
   private playbackPans: StereoPannerNode[] = []
   private analysers: AnalyserNode[] = []
+  private inputAnalyser: AnalyserNode | null = null
   private isCurrentlyPlaying = false
   private playStartTime = 0
   private playStartOffset = 0
@@ -109,6 +110,11 @@ export class AudioEngine {
     this.inputGainNode = this.context!.createGain()
     this.inputGainNode.gain.value = 1.0
     this.sourceNode.connect(this.inputGainNode)
+
+    // Create input analyser for VU meter during recording
+    this.inputAnalyser = this.context!.createAnalyser()
+    this.inputAnalyser.fftSize = 256
+    this.inputGainNode.connect(this.inputAnalyser)
   }
 
   /**
@@ -434,6 +440,13 @@ export class AudioEngine {
   }
 
   /**
+   * Get input analyser node (for VU meter during recording).
+   */
+  getInputAnalyser(): AnalyserNode | null {
+    return this.inputAnalyser
+  }
+
+  /**
    * Get current playback position within the loop (0 to loopDuration).
    */
   getCurrentTime(): number {
@@ -482,6 +495,50 @@ export class AudioEngine {
       data.push(Array.from(buffer.getChannelData(ch)))
     }
     return data
+  }
+
+  /**
+   * Offline mix all tracks into a single stereo AudioBuffer using OfflineAudioContext.
+   * Respects volume, pan, mute, solo, and per-track startOffset.
+   */
+  async exportMix(
+    tracks: { buffer: AudioBuffer; volume: number; pan: number; muted: boolean; solo: boolean; startOffset?: number }[],
+    duration: number,
+  ): Promise<AudioBuffer> {
+    const sampleRate = this.context?.sampleRate ?? 44100
+    const length = Math.ceil(duration * sampleRate)
+    const offline = new OfflineAudioContext(2, length, sampleRate)
+
+    const hasSolo = tracks.some(t => t.solo)
+
+    for (const track of tracks) {
+      if (!track.buffer) continue
+      const shouldPlay = hasSolo ? track.solo : !track.muted
+      if (!shouldPlay) continue
+
+      const source = offline.createBufferSource()
+      source.buffer = track.buffer
+
+      const gain = offline.createGain()
+      gain.gain.value = track.volume
+
+      const pan = offline.createStereoPanner()
+      pan.pan.value = track.pan
+
+      source.connect(gain)
+      gain.connect(pan)
+      pan.connect(offline.destination)
+
+      const trackOffset = track.startOffset ?? 0
+      // Start the source at the track's offset time, from position 0 of the buffer
+      if (trackOffset > 0) {
+        source.start(trackOffset, 0)
+      } else {
+        source.start(0, Math.abs(trackOffset))
+      }
+    }
+
+    return offline.startRendering()
   }
 
   destroy(): void {

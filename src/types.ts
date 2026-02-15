@@ -18,6 +18,7 @@ export interface Session {
   updatedAt: number
   loopDuration: number // seconds (0 = no loop set)
   sampleRate: number
+  bpm: number
   tracks: SerializedTrack[]
 }
 
@@ -29,6 +30,7 @@ export interface SerializedTrack {
   pan: number
   muted: boolean
   solo: boolean
+  startOffset: number
 }
 
 export const NUM_TRACKS = 4

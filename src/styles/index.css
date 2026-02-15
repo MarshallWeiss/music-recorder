@@ -4,7 +4,107 @@
 
 body {
   margin: 0;
-  font-family: 'Inter', system-ui, -apple-system, sans-serif;
+  font-family: 'Helvetica Neue', system-ui, -apple-system, sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  background: #1a1612;
+}
+
+/* Wood grain texture via layered gradients */
+.texture-wood {
+  background:
+    repeating-linear-gradient(
+      90deg,
+      transparent,
+      transparent 2px,
+      rgba(0,0,0,0.04) 2px,
+      rgba(0,0,0,0.04) 4px
+    ),
+    repeating-linear-gradient(
+      85deg,
+      transparent,
+      transparent 8px,
+      rgba(0,0,0,0.02) 8px,
+      rgba(0,0,0,0.02) 12px
+    ),
+    linear-gradient(180deg, #6a4420 0%, #5a3418 20%, #4a2a10 50%, #5a3418 80%, #6a4420 100%);
+}
+
+/* Brushed metal texture */
+.texture-metal {
+  background:
+    repeating-linear-gradient(
+      0deg,
+      transparent,
+      transparent 1px,
+      rgba(255,255,255,0.03) 1px,
+      rgba(255,255,255,0.03) 2px
+    ),
+    linear-gradient(135deg, #c0b8a8 0%, #b0a898 25%, #c8c0b0 50%, #b0a898 75%, #c0b8a8 100%);
+}
+
+/* Cream body with subtle texture */
+.texture-body {
+  background:
+    radial-gradient(ellipse at 30% 20%, rgba(255,255,255,0.12), transparent 50%),
+    radial-gradient(ellipse at 80% 80%, rgba(0,0,0,0.05), transparent 40%),
+    linear-gradient(180deg, #e8dcc8 0%, #ddd0b8 30%, #d4c8b0 60%, #ccc0a4 100%);
+}
+
+/* VU meter face gradient */
+.vu-face {
+  background: radial-gradient(ellipse at 50% 120%, #3a3020 0%, #2a2218 60%, #1a1610 100%);
+}
+
+/* Fader slot groove */
+.fader-slot {
+  background: linear-gradient(90deg, #1a1610 0%, #282218 30%, #282218 70%, #1a1610 100%);
+}
+
+/* Cassette plastic */
+.texture-cassette {
+  background:
+    radial-gradient(ellipse at 40% 30%, rgba(255,255,255,0.05), transparent 50%),
+    linear-gradient(180deg, #444038 0%, #3a3632 30%, #302c28 100%);
+}
+
+/* Knob metallic sheen */
+.knob-body {
+  background: radial-gradient(circle at 38% 35%, #b0a898, #807870 60%, #686058 100%);
+}
+
+/* Knob metallic sheen - small dark variant */
+.knob-body-dark {
+  background: radial-gradient(circle at 38% 35%, #706860, #504840 60%, #383430 100%);
+}
+
+/* Fader thumb grip ridges */
+.fader-thumb-texture {
+  background:
+    repeating-linear-gradient(
+      0deg,
+      transparent,
+      transparent 2px,
+      rgba(0,0,0,0.15) 2px,
+      rgba(0,0,0,0.15) 3px
+    ),
+    linear-gradient(90deg, #908880 0%, #b0a898 30%, #c0b8a8 50%, #b0a898 70%, #908880 100%);
+}
+
+/* Engraved text effect */
+.text-engraved {
+  color: rgba(0,0,0,0.4);
+  text-shadow: 0 1px 0 rgba(255,255,255,0.3);
+}
+
+/* Embossed text effect (light on dark) */
+.text-embossed {
+  color: rgba(255,255,255,0.6);
+  text-shadow: 0 -1px 0 rgba(0,0,0,0.5);
+}
+
+/* Prevent text selection on hardware controls */
+.no-select {
+  user-select: none;
+  -webkit-user-select: none;
 }

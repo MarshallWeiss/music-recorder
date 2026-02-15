@@ -1,6 +1,15 @@
 import { useState, useRef, useEffect, useCallback } from 'react'
 import { AudioEngine, AudioDevice } from '../audio/AudioEngine'
-import { Track, DEFAULT_TRACKS, NUM_TRACKS } from '../types'
+import { Track, Session, SerializedTrack, DEFAULT_TRACKS, NUM_TRACKS } from '../types'
+import { saveSession, loadSession, getSessionList, deleteSession as deleteSessionFromStore } from '../storage/sessionStore'
+import { encodeWav } from '../audio/wavEncoder'
+
+export interface SessionMeta {
+  id: string
+  name: string
+  createdAt: number
+  updatedAt: number
+}
 
 export interface UseAudioEngineReturn {
   // State
@@ -16,6 +25,12 @@ export interface UseAudioEngineReturn {
   metronomeOn: boolean
   currentBeat: number
   isInitialized: boolean
+
+  // Session state
+  currentSessionId: string | null
+  currentSessionName: string
+  sessions: SessionMeta[]
+  isSaving: boolean
 
   // Actions
   initialize: () => Promise<void>
@@ -38,6 +53,18 @@ export interface UseAudioEngineReturn {
   toggleMetronome: () => void
   setTrackOffset: (trackId: number, offset: number) => void
 
+  // Session actions
+  save: () => Promise<void>
+  loadSessionById: (id: string) => Promise<void>
+  newSession: () => void
+  deleteSessionById: (id: string) => Promise<void>
+  setSessionName: (name: string) => void
+  refreshSessions: () => Promise<void>
+
+  // Export
+  exportWav: () => Promise<void>
+  isExporting: boolean
+
   // Engine ref (for VU meters etc)
   engine: AudioEngine | null
 }
@@ -56,6 +83,13 @@ export function useAudioEngine(): UseAudioEngineReturn {
   const [metronomeOn, setMetronomeOn] = useState(false)
   const [currentBeat, setCurrentBeat] = useState(-1)
   const [isInitialized, setIsInitialized] = useState(false)
+
+  // Session state
+  const [currentSessionId, setCurrentSessionId] = useState<string | null>(null)
+  const [currentSessionName, setCurrentSessionName] = useState('Untitled Session')
+  const [sessions, setSessions] = useState<SessionMeta[]>([])
+  const [isSaving, setIsSaving] = useState(false)
+  const [isExporting, setIsExporting] = useState(false)
 
   // Track state ref for use in callbacks without stale closures
   const tracksRef = useRef(tracks)
@@ -322,6 +356,195 @@ export function useAudioEngine(): UseAudioEngineReturn {
     setLoopDuration(0)
   }, [])
 
+  // --- Session management ---
+
+  const bpmRef = useRef(bpm)
+  bpmRef.current = bpm
+  const sessionIdRef = useRef(currentSessionId)
+  sessionIdRef.current = currentSessionId
+  const sessionNameRef = useRef(currentSessionName)
+  sessionNameRef.current = currentSessionName
+
+  const refreshSessions = useCallback(async () => {
+    const list = await getSessionList()
+    setSessions(list)
+  }, [])
+
+  // Load session list on mount
+  useEffect(() => {
+    refreshSessions()
+  }, [refreshSessions])
+
+  const save = useCallback(async () => {
+    const engine = engineRef.current
+    if (!engine) return
+    setIsSaving(true)
+
+    const now = Date.now()
+    const id = sessionIdRef.current ?? crypto.randomUUID()
+    const isNew = !sessionIdRef.current
+
+    const serializedTracks: SerializedTrack[] = tracksRef.current.map(t => ({
+      id: t.id,
+      name: t.name,
+      audioData: t.audioBuffer ? engine.serializeBuffer(t.audioBuffer) : null,
+      volume: t.volume,
+      pan: t.pan,
+      muted: t.muted,
+      solo: t.solo,
+      startOffset: t.startOffset,
+    }))
+
+    const session: Session = {
+      id,
+      name: sessionNameRef.current,
+      createdAt: isNew ? now : now, // will be overwritten by existing if updating
+      updatedAt: now,
+      loopDuration: loopDurationRef.current,
+      sampleRate: engine.getSampleRate(),
+      bpm: bpmRef.current,
+      tracks: serializedTracks,
+    }
+
+    // Preserve original creation time if updating
+    if (!isNew) {
+      const existing = sessions.find(s => s.id === id)
+      if (existing) session.createdAt = existing.createdAt
+    }
+
+    await saveSession(session)
+    setCurrentSessionId(id)
+    await refreshSessions()
+    setIsSaving(false)
+  }, [sessions, refreshSessions])
+
+  const loadSessionById = useCallback(async (id: string) => {
+    const engine = engineRef.current
+    if (!engine) return
+
+    const session = await loadSession(id)
+    if (!session) return
+
+    // Stop any active playback/recording
+    if (engine.isPlaying()) engine.stopAllPlayback()
+    setIsPlaying(false)
+    setIsRecording(false)
+
+    // Restore BPM
+    setBpmState(session.bpm ?? 120)
+    engine.setBpm(session.bpm ?? 120)
+
+    // Restore tracks with deserialized AudioBuffers
+    const restoredTracks: Track[] = DEFAULT_TRACKS.map((def, i) => {
+      const saved = session.tracks.find(t => t.id === i)
+      if (!saved) return { ...def }
+      return {
+        id: saved.id,
+        name: saved.name,
+        audioBuffer: saved.audioData
+          ? engine.createBufferFromData(saved.audioData, session.sampleRate)
+          : null,
+        volume: saved.volume,
+        pan: saved.pan,
+        muted: saved.muted,
+        solo: saved.solo,
+        isRecording: false,
+        isArmed: i === 0,
+        startOffset: saved.startOffset ?? 0,
+      }
+    })
+
+    setTracks(restoredTracks)
+    setLoopDuration(session.loopDuration)
+    setCurrentTime(0)
+    setCurrentSessionId(session.id)
+    setCurrentSessionName(session.name)
+  }, [])
+
+  const newSession = useCallback(() => {
+    const engine = engineRef.current
+    if (engine && engine.isPlaying()) {
+      engine.stopAllPlayback()
+    }
+    setIsPlaying(false)
+    setIsRecording(false)
+    setTracks(DEFAULT_TRACKS.map(t => ({ ...t })))
+    setLoopDuration(0)
+    setCurrentTime(0)
+    setCurrentSessionId(null)
+    setCurrentSessionName('Untitled Session')
+  }, [])
+
+  const deleteSessionById = useCallback(async (id: string) => {
+    await deleteSessionFromStore(id)
+    await refreshSessions()
+    // If we deleted the current session, reset the ID
+    if (sessionIdRef.current === id) {
+      setCurrentSessionId(null)
+    }
+  }, [refreshSessions])
+
+  const setSessionName = useCallback((name: string) => {
+    setCurrentSessionName(name)
+  }, [])
+
+  // --- WAV Export ---
+
+  const exportWav = useCallback(async () => {
+    const engine = engineRef.current
+    if (!engine) return
+    const currentTracks = tracksRef.current
+    const duration = loopDurationRef.current
+
+    const trackData = currentTracks
+      .filter(t => t.audioBuffer)
+      .map(t => ({
+        buffer: t.audioBuffer!,
+        volume: t.volume,
+        pan: t.pan,
+        muted: t.muted,
+        solo: t.solo,
+        startOffset: t.startOffset,
+      }))
+
+    if (trackData.length === 0 || duration <= 0) return
+
+    setIsExporting(true)
+    try {
+      const mixedBuffer = await engine.exportMix(trackData, duration)
+      const wavBlob = encodeWav(mixedBuffer)
+
+      // Trigger download
+      const url = URL.createObjectURL(wavBlob)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = `${sessionNameRef.current || 'mix'}.wav`
+      document.body.appendChild(a)
+      a.click()
+      document.body.removeChild(a)
+      URL.revokeObjectURL(url)
+    } finally {
+      setIsExporting(false)
+    }
+  }, [])
+
+  // Auto-save after recording completes (debounced to avoid rapid saves)
+  const autoSaveTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  useEffect(() => {
+    // Only auto-save if there's recorded audio and we have a session
+    const hasAudio = tracks.some(t => t.audioBuffer)
+    if (!hasAudio || isRecording) return
+
+    if (autoSaveTimeoutRef.current) clearTimeout(autoSaveTimeoutRef.current)
+    autoSaveTimeoutRef.current = setTimeout(() => {
+      save()
+    }, 2000)
+
+    return () => {
+      if (autoSaveTimeoutRef.current) clearTimeout(autoSaveTimeoutRef.current)
+    }
+  }, [tracks, isRecording, save])
+
   return {
     tracks,
     devices,
@@ -354,6 +577,19 @@ export function useAudioEngine(): UseAudioEngineReturn {
     setBpm,
     toggleMetronome,
     setTrackOffset,
+    // Session
+    currentSessionId,
+    currentSessionName,
+    sessions,
+    isSaving,
+    save,
+    loadSessionById,
+    newSession,
+    deleteSessionById,
+    setSessionName,
+    refreshSessions,
+    exportWav,
+    isExporting,
     engine: engineRef.current,
   }
 }

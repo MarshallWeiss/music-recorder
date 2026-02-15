@@ -7,6 +7,12 @@ interface SessionMeta {
   updatedAt: number
 }
 
+interface ExportFormat {
+  label: string
+  mimeType: string
+  ext: string
+}
+
 interface SessionDrawerProps {
   sessions: SessionMeta[]
   currentSessionId: string | null
@@ -14,7 +20,8 @@ interface SessionDrawerProps {
   onDelete: (id: string) => void
   onNew: () => void
   onSave: () => void
-  onExport: () => void
+  exportFormats: ExportFormat[]
+  onExport: (format: ExportFormat) => void
   isSaving: boolean
   isExporting: boolean
   hasRecordedTracks: boolean
@@ -92,12 +99,14 @@ export default function SessionDrawer({
   onDelete,
   onNew,
   onSave,
+  exportFormats,
   onExport,
   isSaving,
   isExporting,
   hasRecordedTracks,
 }: SessionDrawerProps) {
   const [open, setOpen] = useState(false)
+  const [showExportMenu, setShowExportMenu] = useState(false)
 
   return (
     <div className="relative">
@@ -131,14 +140,37 @@ export default function SessionDrawer({
           <span className="text-engraved">{isSaving ? 'Saving...' : 'Save'}</span>
         </button>
 
-        <button
-          onClick={onExport}
-          disabled={isExporting || !hasRecordedTracks}
-          className="px-2 py-0.5 rounded-sm text-[8px] font-label uppercase tracking-wider font-bold shadow-button-up hover:brightness-110 transition-all disabled:opacity-50"
-          style={{ background: 'linear-gradient(180deg, #c0b8a8 0%, #a8a090 100%)' }}
-        >
-          <span className="text-engraved">{isExporting ? 'Exporting...' : 'Export'}</span>
-        </button>
+        <div className="relative">
+          <button
+            onClick={() => setShowExportMenu(!showExportMenu)}
+            disabled={isExporting || !hasRecordedTracks}
+            className="px-2 py-0.5 rounded-sm text-[8px] font-label uppercase tracking-wider font-bold shadow-button-up hover:brightness-110 transition-all disabled:opacity-50"
+            style={{ background: 'linear-gradient(180deg, #c0b8a8 0%, #a8a090 100%)' }}
+          >
+            <span className="text-engraved">{isExporting ? 'Exporting...' : 'Export ▾'}</span>
+          </button>
+
+          {showExportMenu && !isExporting && (
+            <div
+              className="absolute bottom-full mb-1 right-0 z-30 rounded shadow-lg py-1 min-w-[80px]"
+              style={{ background: 'linear-gradient(180deg, #d8d0c0 0%, #c8c0b0 100%)' }}
+            >
+              {exportFormats.map((fmt) => (
+                <button
+                  key={fmt.ext}
+                  onClick={() => {
+                    setShowExportMenu(false)
+                    onExport(fmt)
+                  }}
+                  className="w-full text-left px-3 py-1.5 text-[9px] font-label font-bold uppercase tracking-wider hover:bg-hw-300/50 transition-colors"
+                  style={{ color: '#4a4438' }}
+                >
+                  {fmt.label}
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
 
         <button
           onClick={onNew}

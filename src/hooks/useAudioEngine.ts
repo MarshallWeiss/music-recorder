@@ -3,6 +3,7 @@ import { AudioEngine, AudioDevice } from '../audio/AudioEngine'
 import { Track, Session, SerializedTrack, DEFAULT_TRACKS, NUM_TRACKS } from '../types'
 import { saveSession, loadSession, getSessionList, deleteSession as deleteSessionFromStore } from '../storage/sessionStore'
 import { encodeWav } from '../audio/wavEncoder'
+import { ExportFormat, getSupportedFormats, encodeCompressed } from '../audio/mediaEncoder'
 
 export interface SessionMeta {
   id: string
@@ -66,7 +67,8 @@ export interface UseAudioEngineReturn {
   refreshSessions: () => Promise<void>
 
   // Export
-  exportWav: () => Promise<void>
+  exportFormats: ExportFormat[]
+  exportAudio: (format: ExportFormat) => Promise<void>
   isExporting: boolean
 
   // Engine ref (for VU meters etc)
@@ -557,9 +559,12 @@ export function useAudioEngine(): UseAudioEngineReturn {
     setCurrentSessionName(name)
   }, [])
 
-  // --- WAV Export ---
+  // --- Audio Export ---
 
-  const exportWav = useCallback(async () => {
+  const wavFormat: ExportFormat = { label: 'WAV', mimeType: 'audio/wav', ext: 'wav' }
+  const exportFormats: ExportFormat[] = [wavFormat, ...getSupportedFormats()]
+
+  const exportAudio = useCallback(async (format: ExportFormat) => {
     const engine = engineRef.current
     if (!engine) return
     const currentTracks = tracksRef.current
@@ -580,13 +585,18 @@ export function useAudioEngine(): UseAudioEngineReturn {
     setIsExporting(true)
     try {
       const mixedBuffer = await engine.exportMix(trackData, duration)
-      const wavBlob = encodeWav(mixedBuffer)
 
-      // Trigger download
-      const url = URL.createObjectURL(wavBlob)
+      let blob: Blob
+      if (format.ext === 'wav') {
+        blob = encodeWav(mixedBuffer)
+      } else {
+        blob = await encodeCompressed(mixedBuffer, format.mimeType)
+      }
+
+      const url = URL.createObjectURL(blob)
       const a = document.createElement('a')
       a.href = url
-      a.download = `${sessionNameRef.current || 'mix'}.wav`
+      a.download = `${sessionNameRef.current || 'mix'}.${format.ext}`
       document.body.appendChild(a)
       a.click()
       document.body.removeChild(a)
@@ -660,7 +670,8 @@ export function useAudioEngine(): UseAudioEngineReturn {
     deleteSessionById,
     setSessionName,
     refreshSessions,
-    exportWav,
+    exportFormats,
+    exportAudio,
     isExporting,
     engine: engineRef.current,
   }

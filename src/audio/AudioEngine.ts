@@ -243,6 +243,13 @@ export class AudioEngine {
     this.lastPlayTracks = tracks
     this.lastPlayLoop = loop
 
+    // Compute loop duration from longest track so all sources loop in sync
+    const maxDuration = Math.max(0, ...tracks.filter(t => t.buffer).map(t => t.buffer.duration))
+    if (maxDuration > 0) this.loopDuration = maxDuration
+    const targetSamples = this.loopDuration > 0
+      ? Math.ceil(this.loopDuration * this.context.sampleRate)
+      : 0
+
     const hasSolo = tracks.some(t => t.solo)
     this.isCurrentlyPlaying = true
     this.playStartOffset = offset
@@ -253,8 +260,17 @@ export class AudioEngine {
       const shouldPlay = hasSolo ? track.solo : !track.muted
 
       const source = this.context.createBufferSource()
-      source.buffer = track.buffer
+      // Pad buffer if shorter than loop duration so loopEnd isn't clamped
+      source.buffer = targetSamples > 0
+        ? this.padBuffer(track.buffer, targetSamples)
+        : track.buffer
       source.loop = loop
+
+      // Force all sources to loop at the exact same point
+      if (loop && this.loopDuration > 0) {
+        source.loopStart = 0
+        source.loopEnd = this.loopDuration
+      }
 
       const gain = this.context.createGain()
       gain.gain.value = shouldPlay ? track.volume : 0
@@ -270,8 +286,10 @@ export class AudioEngine {
       pan.connect(analyser)
       analyser.connect(this.context.destination)
 
-      // All tracks share the same tape — start from the same position
-      const bufferPos = offset % track.buffer.duration
+      // All tracks share the same tape — use consistent loop duration for offset
+      const bufferPos = this.loopDuration > 0
+        ? offset % this.loopDuration
+        : offset % track.buffer.duration
       source.start(0, bufferPos)
 
       this.playbackSources.push(source)
@@ -663,18 +681,44 @@ export class AudioEngine {
     }
   }
 
+  /**
+   * Pad an AudioBuffer with silence to reach the target sample count.
+   * Returns the original buffer if already long enough.
+   */
+  private padBuffer(buffer: AudioBuffer, targetSamples: number): AudioBuffer {
+    if (!this.context || buffer.length >= targetSamples) return buffer
+    const padded = this.context.createBuffer(buffer.numberOfChannels, targetSamples, buffer.sampleRate)
+    for (let ch = 0; ch < buffer.numberOfChannels; ch++) {
+      padded.getChannelData(ch).set(buffer.getChannelData(ch))
+    }
+    return padded
+  }
+
   private startMonitorPlayback(
     buffers: { buffer: AudioBuffer; volume: number; pan: number; muted: boolean }[],
     playOffset: number = 0,
   ): void {
     if (!this.context) return
 
+    const targetSamples = this.loopDuration > 0
+      ? Math.ceil(this.loopDuration * this.context.sampleRate)
+      : 0
+
     for (const track of buffers) {
       if (!track.buffer || track.muted) continue
 
       const source = this.context.createBufferSource()
-      source.buffer = track.buffer
+      // Pad buffer if shorter than loop duration so loopEnd isn't clamped
+      source.buffer = targetSamples > 0
+        ? this.padBuffer(track.buffer, targetSamples)
+        : track.buffer
       source.loop = true
+
+      // Force all monitor sources to loop at the same point
+      if (this.loopDuration > 0) {
+        source.loopStart = 0
+        source.loopEnd = this.loopDuration
+      }
 
       const gain = this.context.createGain()
       gain.gain.value = track.volume
@@ -686,8 +730,10 @@ export class AudioEngine {
       gain.connect(pan)
       pan.connect(this.context.destination)
 
-      // All tracks share the same tape — start from the same position
-      const bufferPos = playOffset % track.buffer.duration
+      // Use consistent loop duration for offset calculation
+      const bufferPos = this.loopDuration > 0
+        ? playOffset % this.loopDuration
+        : playOffset % track.buffer.duration
       source.start(0, bufferPos)
 
       this.playbackSources.push(source)

@@ -4,7 +4,6 @@ import MetalPanel from './components/skeuomorphic/MetalPanel'
 import MixerSection from './components/skeuomorphic/MixerSection'
 import CassetteDeck from './components/skeuomorphic/CassetteDeck'
 import TransportButtons from './components/skeuomorphic/TransportButtons'
-import TapeCounter from './components/skeuomorphic/TapeCounter'
 import SessionDrawer from './components/skeuomorphic/SessionDrawer'
 import DeviceSelector from './components/DeviceSelector'
 
@@ -54,7 +53,8 @@ export default function App() {
     newSession,
     deleteSessionById,
     setSessionName,
-    exportWav,
+    exportFormats,
+    exportAudio,
     isExporting,
     engine,
   } = useAudioEngine()
@@ -143,26 +143,19 @@ export default function App() {
                 currentTime={currentTime}
               />
 
-              {/* Transport + counter row */}
-              <div className="flex items-center gap-3">
-                <TransportButtons
-                  isRecording={isRecording}
-                  isCountingIn={isCountingIn}
-                  isPlaying={isPlaying}
-                  hasArmedTrack={!!armedTrack}
-                  hasRecordedTracks={hasRecordedTracks}
-                  loopDuration={loopDuration}
-                  onStartRecording={startRecording}
-                  onStopRecording={stopRecording}
-                  onPlay={play}
-                  onStop={stop}
-                  onSeekTo={seekTo}
-                />
-                <TapeCounter
-                  currentTime={currentTime}
-                  loopDuration={loopDuration}
-                />
-              </div>
+              <TransportButtons
+                isRecording={isRecording}
+                isCountingIn={isCountingIn}
+                isPlaying={isPlaying}
+                hasArmedTrack={!!armedTrack}
+                hasRecordedTracks={hasRecordedTracks}
+                loopDuration={loopDuration}
+                onStartRecording={startRecording}
+                onStopRecording={stopRecording}
+                onPlay={play}
+                onStop={stop}
+                onSeekTo={seekTo}
+              />
             </div>
           </div>
 
@@ -175,7 +168,8 @@ export default function App() {
               onDelete={deleteSessionById}
               onNew={newSession}
               onSave={save}
-              onExport={exportWav}
+              exportFormats={exportFormats}
+              onExport={exportAudio}
               isSaving={isSaving}
               isExporting={isExporting}
               hasRecordedTracks={hasRecordedTracks}

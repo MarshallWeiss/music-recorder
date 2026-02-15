@@ -105,7 +105,6 @@ export function useAudioEngine(): UseAudioEngineReturn {
   tracksRef.current = tracks
   const loopDurationRef = useRef(loopDuration)
   loopDurationRef.current = loopDuration
-  const recordingStartPosRef = useRef(0)
 
   useEffect(() => {
     const engine = new AudioEngine()
@@ -147,39 +146,6 @@ export function useAudioEngine(): UseAudioEngineReturn {
     })))
   }, [])
 
-  /**
-   * Rotate an AudioBuffer so that buffer position 0 aligns with tape position 0.
-   * When recording starts at `startPos` into a loop, the raw buffer has:
-   *   [tape startPos → end, tape 0 → startPos]
-   * This rotates it to:
-   *   [tape 0 → startPos, tape startPos → end]
-   */
-  const alignBufferToTapeStart = useCallback((buffer: AudioBuffer, startPos: number): AudioBuffer => {
-    const engine = engineRef.current
-    if (!engine || startPos <= 0) return buffer
-
-    const sampleRate = buffer.sampleRate
-    const totalSamples = buffer.length
-    const offsetSamples = Math.min(Math.round(startPos * sampleRate), totalSamples)
-
-    if (offsetSamples <= 0 || offsetSamples >= totalSamples) return buffer
-
-    const ctx = engine.getContext()
-    if (!ctx) return buffer
-
-    const aligned = ctx.createBuffer(1, totalSamples, sampleRate)
-    const src = buffer.getChannelData(0)
-    const dst = aligned.getChannelData(0)
-
-    // Part at end of raw buffer (tape 0 → startPos) → goes to start of aligned
-    const tailStart = totalSamples - offsetSamples
-    dst.set(src.subarray(tailStart), 0)
-    // Part at start of raw buffer (tape startPos → end) → goes after
-    dst.set(src.subarray(0, tailStart), offsetSamples)
-
-    return aligned
-  }, [])
-
   // Ref so startRecording callback can read current countInEnabled without going stale
   const countInEnabledRef = useRef(countInEnabled)
   countInEnabledRef.current = countInEnabled
@@ -191,10 +157,12 @@ export function useAudioEngine(): UseAudioEngineReturn {
     const armed = tracksRef.current.find(t => t.isArmed)
     if (!armed) return
 
-    // Capture current playhead position for overdub sync
     const hasLoop = loopDurationRef.current > 0
-    const currentPos = hasLoop ? engine.getCurrentTime() : 0
-    recordingStartPosRef.current = currentPos
+
+    // Stop any existing playback to avoid double sources
+    if (engine.isPlaying()) {
+      engine.stopAllPlayback()
+    }
 
     // Build monitor buffers (all tracks except the armed one)
     const monitorBuffers = tracksRef.current
@@ -210,12 +178,13 @@ export function useAudioEngine(): UseAudioEngineReturn {
       t.id === armed.id ? { ...t, isRecording: true } : t,
     ))
     setIsRecording(true)
+    setIsPlaying(false)
     setIsCountingIn(false)
 
     engine.startRecording(
       monitorBuffers,
       hasLoop ? loopDurationRef.current : undefined,
-      currentPos,
+      0, // Always start from position 0
     )
 
     // Poll for auto-stop (engine sets isCurrentlyRecording = false at loop boundary)
@@ -248,31 +217,22 @@ export function useAudioEngine(): UseAudioEngineReturn {
   }, [beginRecordingNow])
 
   const handleRecordingComplete = useCallback((trackId: number, buffer: AudioBuffer | null) => {
-    const recordStartPos = recordingStartPosRef.current
-
     setTracks(prev => {
-      let finalBuffer = buffer
-      // If overdubbing (loop exists) and recording started mid-loop, rotate the buffer
-      // so that buffer[0] = tape position 0. Like a real tape — all tracks aligned.
-      if (finalBuffer && loopDurationRef.current > 0 && recordStartPos > 0) {
-        finalBuffer = alignBufferToTapeStart(finalBuffer, recordStartPos)
-      }
-
       const updated = prev.map(t =>
         t.id === trackId
-          ? { ...t, isRecording: false, audioBuffer: finalBuffer ?? t.audioBuffer }
+          ? { ...t, isRecording: false, audioBuffer: buffer ?? t.audioBuffer }
           : t,
       )
 
       // First recording on any track sets the loop/tape length
-      if (finalBuffer && loopDurationRef.current <= 0) {
-        setLoopDuration(finalBuffer.duration)
+      if (buffer && loopDurationRef.current <= 0) {
+        setLoopDuration(buffer.duration)
       }
 
       return updated
     })
     setIsRecording(false)
-  }, [alignBufferToTapeStart])
+  }, [])
 
   const stopRecording = useCallback(() => {
     const engine = engineRef.current

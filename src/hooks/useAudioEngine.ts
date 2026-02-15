@@ -235,9 +235,7 @@ export function useAudioEngine(): UseAudioEngineReturn {
     const armed = tracksRef.current.find(t => t.isArmed)
     if (!armed) return
 
-    // Count-in only makes sense when overdubbing (loop already exists)
-    const isOverdub = loopDurationRef.current > 0
-    if (isOverdub && countInEnabledRef.current) {
+    if (countInEnabledRef.current) {
       setIsCountingIn(true)
       engine.startCountIn(() => {
         beginRecordingNow()

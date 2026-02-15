@@ -70,6 +70,9 @@ export default function ChannelStrip({
         setShowMenu(true)
       }}
     >
+      {/* Recorded indicator LED */}
+      <StatusLED active={!!track.audioBuffer} color="green" size="sm" />
+
       {/* Pan knob */}
       <RotaryKnob
         value={panToKnob(track.pan)}
@@ -142,31 +145,49 @@ export default function ChannelStrip({
         />
       </div>
 
-      {/* Channel label */}
-      {editing ? (
-        <input
-          ref={inputRef}
-          value={editName}
-          onChange={(e) => setEditName(e.target.value)}
-          onBlur={commitEdit}
-          onKeyDown={(e) => {
-            if (e.key === 'Enter') commitEdit()
-            if (e.key === 'Escape') setEditing(false)
-          }}
-          className="w-12 text-[9px] bg-hw-700 text-hw-100 rounded px-1 py-0.5 text-center outline-none border border-hw-500"
-        />
-      ) : (
-        <span
-          className="text-[11px] font-label font-bold text-engraved cursor-default"
-          onDoubleClick={() => {
-            setEditName(track.name)
-            setEditing(true)
-          }}
-          title="Double-click to rename"
-        >
-          {track.id + 1}
-        </span>
-      )}
+      {/* Channel label + delete */}
+      <div className="flex flex-col items-center gap-1">
+        {editing ? (
+          <input
+            ref={inputRef}
+            value={editName}
+            onChange={(e) => setEditName(e.target.value)}
+            onBlur={commitEdit}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') commitEdit()
+              if (e.key === 'Escape') setEditing(false)
+            }}
+            className="w-12 text-[9px] bg-hw-700 text-hw-100 rounded px-1 py-0.5 text-center outline-none border border-hw-500"
+          />
+        ) : (
+          <span
+            className="text-[11px] font-label font-bold text-engraved cursor-default"
+            onDoubleClick={() => {
+              setEditName(track.name)
+              setEditing(true)
+            }}
+            title="Double-click to rename"
+          >
+            {track.id + 1}
+          </span>
+        )}
+
+        {/* Delete recording button */}
+        {track.audioBuffer && (
+          <button
+            onClick={onClearTrack}
+            className="w-5 h-5 rounded-full flex items-center justify-center shadow-button-up hover:brightness-110 transition-all"
+            style={{
+              background: 'radial-gradient(circle at 38% 35%, #c0b0a0, #907870 100%)',
+            }}
+            title="Delete recording"
+          >
+            <svg width="8" height="8" viewBox="0 0 8 8" stroke="rgba(0,0,0,0.5)" strokeWidth="1.5" strokeLinecap="round">
+              <path d="M2 2l4 4M6 2l-4 4" />
+            </svg>
+          </button>
+        )}
+      </div>
 
       {/* Context menu */}
       {showMenu && (

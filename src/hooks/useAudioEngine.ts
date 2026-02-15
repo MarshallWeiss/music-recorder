@@ -23,6 +23,9 @@ export interface UseAudioEngineReturn {
   inputGain: number
   bpm: number
   metronomeOn: boolean
+  metronomeAudible: boolean
+  countInEnabled: boolean
+  isCountingIn: boolean
   currentBeat: number
   isInitialized: boolean
 
@@ -51,7 +54,8 @@ export interface UseAudioEngineReturn {
   renameTrack: (trackId: number, name: string) => void
   setBpm: (bpm: number) => void
   toggleMetronome: () => void
-  setTrackOffset: (trackId: number, offset: number) => void
+  toggleMetronomeAudible: () => void
+  toggleCountIn: () => void
 
   // Session actions
   save: () => Promise<void>
@@ -78,9 +82,12 @@ export function useAudioEngine(): UseAudioEngineReturn {
   const [isPlaying, setIsPlaying] = useState(false)
   const [currentTime, setCurrentTime] = useState(0)
   const [loopDuration, setLoopDuration] = useState(0)
-  const [inputGain, setInputGainState] = useState(1.0)
+  const [inputGain, setInputGainState] = useState(3.0)
   const [bpm, setBpmState] = useState(120)
   const [metronomeOn, setMetronomeOn] = useState(false)
+  const [metronomeAudible, setMetronomeAudible] = useState(true)
+  const [countInEnabled, setCountInEnabled] = useState(true)
+  const [isCountingIn, setIsCountingIn] = useState(false)
   const [currentBeat, setCurrentBeat] = useState(-1)
   const [isInitialized, setIsInitialized] = useState(false)
 
@@ -127,8 +134,9 @@ export function useAudioEngine(): UseAudioEngineReturn {
     const engine = engineRef.current
     if (!engine) return
     await engine.selectDevice(deviceId)
+    engine.setInputGain(inputGain)
     setSelectedDeviceId(deviceId)
-  }, [])
+  }, [inputGain])
 
   const armTrack = useCallback((trackId: number) => {
     setTracks(prev => prev.map(t => ({
@@ -137,7 +145,44 @@ export function useAudioEngine(): UseAudioEngineReturn {
     })))
   }, [])
 
-  const startRecording = useCallback(() => {
+  /**
+   * Rotate an AudioBuffer so that buffer position 0 aligns with tape position 0.
+   * When recording starts at `startPos` into a loop, the raw buffer has:
+   *   [tape startPos → end, tape 0 → startPos]
+   * This rotates it to:
+   *   [tape 0 → startPos, tape startPos → end]
+   */
+  const alignBufferToTapeStart = useCallback((buffer: AudioBuffer, startPos: number): AudioBuffer => {
+    const engine = engineRef.current
+    if (!engine || startPos <= 0) return buffer
+
+    const sampleRate = buffer.sampleRate
+    const totalSamples = buffer.length
+    const offsetSamples = Math.min(Math.round(startPos * sampleRate), totalSamples)
+
+    if (offsetSamples <= 0 || offsetSamples >= totalSamples) return buffer
+
+    const ctx = engine.getContext()
+    if (!ctx) return buffer
+
+    const aligned = ctx.createBuffer(1, totalSamples, sampleRate)
+    const src = buffer.getChannelData(0)
+    const dst = aligned.getChannelData(0)
+
+    // Part at end of raw buffer (tape 0 → startPos) → goes to start of aligned
+    const tailStart = totalSamples - offsetSamples
+    dst.set(src.subarray(tailStart), 0)
+    // Part at start of raw buffer (tape startPos → end) → goes after
+    dst.set(src.subarray(0, tailStart), offsetSamples)
+
+    return aligned
+  }, [])
+
+  // Ref so startRecording callback can read current countInEnabled without going stale
+  const countInEnabledRef = useRef(countInEnabled)
+  countInEnabledRef.current = countInEnabled
+
+  const beginRecordingNow = useCallback(() => {
     const engine = engineRef.current
     if (!engine) return
 
@@ -157,13 +202,13 @@ export function useAudioEngine(): UseAudioEngineReturn {
         volume: t.volume,
         pan: t.pan,
         muted: t.muted,
-        startOffset: t.startOffset,
       }))
 
     setTracks(prev => prev.map(t =>
       t.id === armed.id ? { ...t, isRecording: true } : t,
     ))
     setIsRecording(true)
+    setIsCountingIn(false)
 
     engine.startRecording(
       monitorBuffers,
@@ -175,44 +220,67 @@ export function useAudioEngine(): UseAudioEngineReturn {
     const interval = setInterval(() => {
       if (!engine.isRecording()) {
         clearInterval(interval)
-        // Engine auto-stopped — retrieve the buffer via stopRecording
         const buffer = engine.stopRecording()
         handleRecordingComplete(armed.id, buffer)
       }
     }, 100)
 
-    // Store interval for cleanup
     ;(engine as any)._autoStopInterval = interval
   }, [])
 
+  const startRecording = useCallback(() => {
+    const engine = engineRef.current
+    if (!engine) return
+
+    const armed = tracksRef.current.find(t => t.isArmed)
+    if (!armed) return
+
+    // Count-in only makes sense when overdubbing (loop already exists)
+    const isOverdub = loopDurationRef.current > 0
+    if (isOverdub && countInEnabledRef.current) {
+      setIsCountingIn(true)
+      engine.startCountIn(() => {
+        beginRecordingNow()
+      })
+    } else {
+      beginRecordingNow()
+    }
+  }, [beginRecordingNow])
+
   const handleRecordingComplete = useCallback((trackId: number, buffer: AudioBuffer | null) => {
     const recordStartPos = recordingStartPosRef.current
+
     setTracks(prev => {
+      let finalBuffer = buffer
+      // If overdubbing (loop exists) and recording started mid-loop, rotate the buffer
+      // so that buffer[0] = tape position 0. Like a real tape — all tracks aligned.
+      if (finalBuffer && loopDurationRef.current > 0 && recordStartPos > 0) {
+        finalBuffer = alignBufferToTapeStart(finalBuffer, recordStartPos)
+      }
+
       const updated = prev.map(t =>
         t.id === trackId
-          ? {
-              ...t,
-              isRecording: false,
-              audioBuffer: buffer ?? t.audioBuffer,
-              // Track 0 (loop source) always starts at 0; overdubs start at their record position
-              startOffset: buffer ? (loopDurationRef.current > 0 ? recordStartPos : 0) : t.startOffset,
-            }
+          ? { ...t, isRecording: false, audioBuffer: finalBuffer ?? t.audioBuffer }
           : t,
       )
 
-      // If this is Track 0 (first track) and we just set the loop
-      if (trackId === 0 && buffer) {
-        setLoopDuration(buffer.duration)
+      // First recording on any track sets the loop/tape length
+      if (finalBuffer && loopDurationRef.current <= 0) {
+        setLoopDuration(finalBuffer.duration)
       }
 
       return updated
     })
     setIsRecording(false)
-  }, [])
+  }, [alignBufferToTapeStart])
 
   const stopRecording = useCallback(() => {
     const engine = engineRef.current
     if (!engine) return
+
+    // Cancel count-in if in progress
+    engine.stopCountIn()
+    setIsCountingIn(false)
 
     // Clear auto-stop interval
     if ((engine as any)._autoStopInterval) {
@@ -238,7 +306,6 @@ export function useAudioEngine(): UseAudioEngineReturn {
         pan: t.pan,
         muted: t.muted,
         solo: t.solo,
-        startOffset: t.startOffset,
       }))
 
     if (trackData.length === 0) return
@@ -306,11 +373,11 @@ export function useAudioEngine(): UseAudioEngineReturn {
       const updated = prev.map(t =>
         t.id === trackId ? { ...t, audioBuffer: null } : t,
       )
-      // If clearing Track 0, clear everything
-      if (trackId === 0) {
+      // If no tracks have audio left, reset the tape
+      const hasAnyAudio = updated.some(t => t.audioBuffer)
+      if (!hasAnyAudio) {
         setLoopDuration(0)
         setCurrentTime(0)
-        return updated.map(t => ({ ...t, audioBuffer: null }))
       }
       return updated
     })
@@ -345,10 +412,16 @@ export function useAudioEngine(): UseAudioEngineReturn {
     }
   }, [])
 
-  const setTrackOffset = useCallback((trackId: number, offset: number) => {
-    setTracks(prev => prev.map(t =>
-      t.id === trackId ? { ...t, startOffset: offset } : t,
-    ))
+  const toggleMetronomeAudible = useCallback(() => {
+    const engine = engineRef.current
+    if (!engine) return
+    const next = !metronomeAudible
+    setMetronomeAudible(next)
+    engine.setMetronomeAudible(next)
+  }, [metronomeAudible])
+
+  const toggleCountIn = useCallback(() => {
+    setCountInEnabled(prev => !prev)
   }, [])
 
   const clearAll = useCallback(() => {
@@ -392,7 +465,6 @@ export function useAudioEngine(): UseAudioEngineReturn {
       pan: t.pan,
       muted: t.muted,
       solo: t.solo,
-      startOffset: t.startOffset,
     }))
 
     const session: Session = {
@@ -450,7 +522,6 @@ export function useAudioEngine(): UseAudioEngineReturn {
         solo: saved.solo,
         isRecording: false,
         isArmed: i === 0,
-        startOffset: saved.startOffset ?? 0,
       }
     })
 
@@ -504,7 +575,6 @@ export function useAudioEngine(): UseAudioEngineReturn {
         pan: t.pan,
         muted: t.muted,
         solo: t.solo,
-        startOffset: t.startOffset,
       }))
 
     if (trackData.length === 0 || duration <= 0) return
@@ -556,6 +626,9 @@ export function useAudioEngine(): UseAudioEngineReturn {
     inputGain,
     bpm,
     metronomeOn,
+    metronomeAudible,
+    countInEnabled,
+    isCountingIn,
     currentBeat,
     isInitialized,
     initialize,
@@ -576,7 +649,8 @@ export function useAudioEngine(): UseAudioEngineReturn {
     renameTrack,
     setBpm,
     toggleMetronome,
-    setTrackOffset,
+    toggleMetronomeAudible,
+    toggleCountIn,
     // Session
     currentSessionId,
     currentSessionName,

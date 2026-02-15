@@ -2,6 +2,7 @@ import StatusLED from './StatusLED'
 
 interface TransportButtonsProps {
   isRecording: boolean
+  isCountingIn: boolean
   isPlaying: boolean
   hasArmedTrack: boolean
   hasRecordedTracks: boolean
@@ -71,6 +72,7 @@ function TransportButton({
 
 export default function TransportButtons({
   isRecording,
+  isCountingIn,
   isPlaying,
   hasArmedTrack,
   hasRecordedTracks,
@@ -81,18 +83,19 @@ export default function TransportButtons({
   onStop,
   onSeekTo,
 }: TransportButtonsProps) {
+  const recActive = isRecording || isCountingIn
   return (
     <div className="flex items-end gap-3 px-4 py-3">
       {/* REC */}
       <TransportButton
-        onClick={isRecording ? onStopRecording : onStartRecording}
-        active={isRecording}
+        onClick={recActive ? onStopRecording : onStartRecording}
+        active={recActive}
         disabled={!hasArmedTrack}
         variant="record"
         label="REC"
-        ledColor="red"
-        ledActive={isRecording}
-        ledPulse={isRecording}
+        ledColor={isCountingIn ? 'amber' : 'red'}
+        ledActive={recActive}
+        ledPulse={recActive}
       >
         <div className="w-3 h-3 rounded-full bg-red-400" />
       </TransportButton>
@@ -137,8 +140,8 @@ export default function TransportButtons({
 
       {/* STOP */}
       <TransportButton
-        onClick={onStop}
-        disabled={!isPlaying && !isRecording}
+        onClick={recActive ? onStopRecording : onStop}
+        disabled={!isPlaying && !recActive}
         label="STOP"
       >
         <div className="w-3 h-3 bg-white rounded-sm" />

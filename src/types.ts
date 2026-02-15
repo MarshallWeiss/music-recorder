@@ -8,7 +8,6 @@ export interface Track {
   solo: boolean
   isRecording: boolean
   isArmed: boolean
-  startOffset: number  // seconds offset within the loop (for alignment)
 }
 
 export interface Session {
@@ -30,7 +29,6 @@ export interface SerializedTrack {
   pan: number
   muted: boolean
   solo: boolean
-  startOffset: number
 }
 
 export const NUM_TRACKS = 4
@@ -45,5 +43,4 @@ export const DEFAULT_TRACKS: Track[] = Array.from({ length: NUM_TRACKS }, (_, i)
   solo: false,
   isRecording: false,
   isArmed: i === 0, // Track 1 armed by default
-  startOffset: 0,
 }))

@@ -29,7 +29,7 @@ export class AudioEngine {
   private playStartOffset = 0
   private loopDuration = 0
   private animFrameId: number | null = null
-  private lastPlayTracks: { buffer: AudioBuffer; volume: number; pan: number; muted: boolean; solo: boolean; startOffset?: number }[] = []
+  private lastPlayTracks: { buffer: AudioBuffer; volume: number; pan: number; muted: boolean; solo: boolean }[] = []
   private lastPlayLoop = true
 
   // Metronome
@@ -40,6 +40,8 @@ export class AudioEngine {
   private metronomeNextBeatTime = 0
   private metronomeBeatIndex = 0
   private metronomeVolume = 0.5
+  private metronomeAudible = true
+  private countInIntervalId: ReturnType<typeof setTimeout> | null = null
 
   // Callbacks
   onPlaybackEnd: (() => void) | null = null
@@ -107,8 +109,10 @@ export class AudioEngine {
     this.sourceNode = this.context!.createMediaStreamSource(this.stream)
 
     // Create input gain node for controlling recording level
+    // Default gain of 3.0 (~+9.5dB) compensates for raw mic levels
+    // when browser AGC is disabled (internal mics are naturally quiet)
     this.inputGainNode = this.context!.createGain()
-    this.inputGainNode.gain.value = 1.0
+    this.inputGainNode.gain.value = 3.0
     this.sourceNode.connect(this.inputGainNode)
 
     // Create input analyser for VU meter during recording
@@ -123,7 +127,7 @@ export class AudioEngine {
    * playOffset: start monitors and time tracking from this position in the loop.
    */
   startRecording(
-    monitorBuffers?: { buffer: AudioBuffer; volume: number; pan: number; muted: boolean; startOffset?: number }[],
+    monitorBuffers?: { buffer: AudioBuffer; volume: number; pan: number; muted: boolean }[],
     loopDuration?: number,
     playOffset?: number,
   ): void {
@@ -228,7 +232,7 @@ export class AudioEngine {
    * @param offset Start playback from this time (seconds) into the buffer.
    */
   playAll(
-    tracks: { buffer: AudioBuffer; volume: number; pan: number; muted: boolean; solo: boolean; startOffset?: number }[],
+    tracks: { buffer: AudioBuffer; volume: number; pan: number; muted: boolean; solo: boolean }[],
     loop: boolean = true,
     offset: number = 0,
   ): void {
@@ -266,9 +270,8 @@ export class AudioEngine {
       pan.connect(analyser)
       analyser.connect(this.context.destination)
 
-      // Account for per-track offset
-      const trackOffset = track.startOffset ?? 0
-      const bufferPos = ((offset - trackOffset) % track.buffer.duration + track.buffer.duration) % track.buffer.duration
+      // All tracks share the same tape — start from the same position
+      const bufferPos = offset % track.buffer.duration
       source.start(0, bufferPos)
 
       this.playbackSources.push(source)
@@ -370,6 +373,14 @@ export class AudioEngine {
     this.metronomeVolume = volume
   }
 
+  setMetronomeAudible(audible: boolean): void {
+    this.metronomeAudible = audible
+  }
+
+  isMetronomeAudible(): boolean {
+    return this.metronomeAudible
+  }
+
   /**
    * Get the loop duration for a given number of bars at current tempo.
    */
@@ -423,6 +434,45 @@ export class AudioEngine {
 
   isMetronomeRunning(): boolean {
     return this.metronomeEnabled
+  }
+
+  /**
+   * Play a 1-bar count-in (always audible), then call onDone.
+   * Fires onBeat during count-in for visual feedback.
+   */
+  startCountIn(onDone: () => void): void {
+    if (!this.context) { onDone(); return }
+    this.stopCountIn()
+
+    const secondsPerBeat = 60 / this.metronomeBpm
+    const totalBeats = this.metronomeBeatsPerBar
+    let beatIndex = 0
+
+    // Schedule first click immediately
+    this.scheduleClick(this.context.currentTime, true, true)
+    if (this.onBeat) this.onBeat(0, true)
+    beatIndex = 1
+
+    this.countInIntervalId = setInterval(() => {
+      if (beatIndex >= totalBeats) {
+        this.stopCountIn()
+        onDone()
+        return
+      }
+      if (this.context) {
+        const isDownbeat = beatIndex === 0
+        this.scheduleClick(this.context.currentTime, isDownbeat, true)
+        if (this.onBeat) this.onBeat(beatIndex, isDownbeat)
+      }
+      beatIndex++
+    }, secondsPerBeat * 1000)
+  }
+
+  stopCountIn(): void {
+    if (this.countInIntervalId !== null) {
+      clearInterval(this.countInIntervalId)
+      this.countInIntervalId = null
+    }
   }
 
   /**
@@ -499,10 +549,10 @@ export class AudioEngine {
 
   /**
    * Offline mix all tracks into a single stereo AudioBuffer using OfflineAudioContext.
-   * Respects volume, pan, mute, solo, and per-track startOffset.
+   * Respects volume, pan, mute, and solo. All tracks start at position 0 (shared tape).
    */
   async exportMix(
-    tracks: { buffer: AudioBuffer; volume: number; pan: number; muted: boolean; solo: boolean; startOffset?: number }[],
+    tracks: { buffer: AudioBuffer; volume: number; pan: number; muted: boolean; solo: boolean }[],
     duration: number,
   ): Promise<AudioBuffer> {
     const sampleRate = this.context?.sampleRate ?? 44100
@@ -529,13 +579,7 @@ export class AudioEngine {
       gain.connect(pan)
       pan.connect(offline.destination)
 
-      const trackOffset = track.startOffset ?? 0
-      // Start the source at the track's offset time, from position 0 of the buffer
-      if (trackOffset > 0) {
-        source.start(trackOffset, 0)
-      } else {
-        source.start(0, Math.abs(trackOffset))
-      }
+      source.start(0)
     }
 
     return offline.startRendering()
@@ -544,6 +588,7 @@ export class AudioEngine {
   destroy(): void {
     this.stopAllPlayback()
     this.stopMetronome()
+    this.stopCountIn()
     if (this.stream) {
       this.stream.getTracks().forEach(t => t.stop())
     }
@@ -554,8 +599,9 @@ export class AudioEngine {
 
   // --- Private ---
 
-  private scheduleClick(time: number, isDownbeat: boolean): void {
+  private scheduleClick(time: number, isDownbeat: boolean, forceAudible = false): void {
     if (!this.context) return
+    if (!this.metronomeAudible && !forceAudible) return
 
     // Higher pitch for downbeat (1000Hz), lower for other beats (800Hz)
     const freq = isDownbeat ? 1000 : 800
@@ -618,7 +664,7 @@ export class AudioEngine {
   }
 
   private startMonitorPlayback(
-    buffers: { buffer: AudioBuffer; volume: number; pan: number; muted: boolean; startOffset?: number }[],
+    buffers: { buffer: AudioBuffer; volume: number; pan: number; muted: boolean }[],
     playOffset: number = 0,
   ): void {
     if (!this.context) return
@@ -640,9 +686,8 @@ export class AudioEngine {
       gain.connect(pan)
       pan.connect(this.context.destination)
 
-      // Start from the correct position, accounting for track's own offset
-      const trackOffset = track.startOffset ?? 0
-      const bufferPos = ((playOffset - trackOffset) % track.buffer.duration + track.buffer.duration) % track.buffer.duration
+      // All tracks share the same tape — start from the same position
+      const bufferPos = playOffset % track.buffer.duration
       source.start(0, bufferPos)
 
       this.playbackSources.push(source)

@@ -20,6 +20,9 @@ export default function App() {
     inputGain,
     bpm,
     metronomeOn,
+    metronomeAudible,
+    countInEnabled,
+    isCountingIn,
     currentBeat,
     isInitialized,
     initialize,
@@ -38,6 +41,8 @@ export default function App() {
     renameTrack,
     setBpm,
     toggleMetronome,
+    toggleMetronomeAudible,
+    toggleCountIn,
     seekTo,
     // Session
     currentSessionId,
@@ -105,7 +110,11 @@ export default function App() {
             bpm={bpm}
             setBpm={setBpm}
             metronomeOn={metronomeOn}
+            metronomeAudible={metronomeAudible}
+            countInEnabled={countInEnabled}
             toggleMetronome={toggleMetronome}
+            toggleMetronomeAudible={toggleMetronomeAudible}
+            toggleCountIn={toggleCountIn}
             currentBeat={currentBeat}
           />
 
@@ -138,6 +147,7 @@ export default function App() {
               <div className="flex items-center gap-3">
                 <TransportButtons
                   isRecording={isRecording}
+                  isCountingIn={isCountingIn}
                   isPlaying={isPlaying}
                   hasArmedTrack={!!armedTrack}
                   hasRecordedTracks={hasRecordedTracks}

@@ -1,9 +1,12 @@
+import { useState, useCallback } from 'react'
 import { useAudioEngine } from './hooks/useAudioEngine'
+import { useLooper } from './hooks/useLooper'
 import WoodPanel from './components/skeuomorphic/WoodPanel'
 import MetalPanel from './components/skeuomorphic/MetalPanel'
 import MixerSection from './components/skeuomorphic/MixerSection'
 import CassetteDeck from './components/skeuomorphic/CassetteDeck'
 import TransportButtons from './components/skeuomorphic/TransportButtons'
+import LooperView from './components/skeuomorphic/LooperView'
 import SessionDrawer from './components/skeuomorphic/SessionDrawer'
 import DeviceSelector from './components/DeviceSelector'
 
@@ -58,6 +61,25 @@ export default function App() {
     isExporting,
     engine,
   } = useAudioEngine()
+
+  const [mode, setMode] = useState<'multitrack' | 'looper'>('multitrack')
+  const isLooperMode = mode === 'looper'
+
+  const looper = useLooper(engine, isLooperMode)
+
+  // Stomp button click = simulate a spacebar tap
+  const handleStompClick = useCallback(() => {
+    window.dispatchEvent(new KeyboardEvent('keydown', { key: ' ' }))
+    setTimeout(() => {
+      window.dispatchEvent(new KeyboardEvent('keyup', { key: ' ' }))
+    }, 50)
+  }, [])
+
+  const toggleMode = useCallback(() => {
+    if (isRecording) stopRecording()
+    if (isPlaying) stop()
+    setMode(prev => prev === 'multitrack' ? 'looper' : 'multitrack')
+  }, [isRecording, isPlaying, stopRecording, stop])
 
   const armedTrack = tracks.find(t => t.isArmed)
   const hasRecordedTracks = tracks.some(t => t.audioBuffer)
@@ -118,45 +140,88 @@ export default function App() {
             currentBeat={currentBeat}
           />
 
-          {/* Middle: Mixer + Cassette Deck */}
-          <div className="flex items-stretch flex-1 px-4 py-4 gap-4">
-            {/* Mixer section (left) */}
-            <MixerSection
-              tracks={tracks}
-              onArmTrack={armTrack}
-              onSetVolume={setVolume}
-              onSetPan={setPan}
-              onToggleMute={toggleMute}
-              onToggleSolo={toggleSolo}
-              onClearTrack={clearTrack}
-              onRenameTrack={renameTrack}
-            />
+          {/* Mode toggle */}
+          <div className="flex items-center justify-center gap-3 py-1.5 border-b border-hw-400/10">
+            <button
+              onClick={toggleMode}
+              className={`px-3 py-1 rounded text-[9px] font-label uppercase tracking-wider font-bold transition-all ${
+                !isLooperMode ? 'shadow-button-down' : 'shadow-button-up'
+              }`}
+              style={{
+                background: !isLooperMode
+                  ? 'radial-gradient(circle, #4a6a8a 0%, #3a5a7a 100%)'
+                  : 'radial-gradient(circle at 38% 35%, #a09888, #706860 100%)',
+                color: !isLooperMode ? 'rgba(200,210,230,0.9)' : 'rgba(0,0,0,0.35)',
+              }}
+            >
+              4-Track
+            </button>
+            <button
+              onClick={toggleMode}
+              className={`px-3 py-1 rounded text-[9px] font-label uppercase tracking-wider font-bold transition-all ${
+                isLooperMode ? 'shadow-button-down' : 'shadow-button-up'
+              }`}
+              style={{
+                background: isLooperMode
+                  ? 'radial-gradient(circle, #4a6a8a 0%, #3a5a7a 100%)'
+                  : 'radial-gradient(circle at 38% 35%, #a09888, #706860 100%)',
+                color: isLooperMode ? 'rgba(200,210,230,0.9)' : 'rgba(0,0,0,0.35)',
+              }}
+            >
+              Looper
+            </button>
+          </div>
 
-            {/* Cassette deck + transport (right) */}
-            <div className="flex flex-col items-center gap-2 flex-1 justify-center">
-              <CassetteDeck
-                isPlaying={isPlaying}
-                isRecording={isRecording}
+          {/* Middle: Mixer + Transport (multitrack) or Stomp (looper) */}
+          <div className="flex items-stretch flex-1 px-4 py-4 gap-4">
+            {isLooperMode ? (
+              <LooperView
+                looper={looper}
                 sessionName={currentSessionName}
                 onSetSessionName={setSessionName}
-                loopDuration={loopDuration}
-                currentTime={currentTime}
+                onStompClick={handleStompClick}
               />
+            ) : (
+              <>
+                {/* Mixer section (left) */}
+                <MixerSection
+                  tracks={tracks}
+                  onArmTrack={armTrack}
+                  onSetVolume={setVolume}
+                  onSetPan={setPan}
+                  onToggleMute={toggleMute}
+                  onToggleSolo={toggleSolo}
+                  onClearTrack={clearTrack}
+                  onRenameTrack={renameTrack}
+                />
 
-              <TransportButtons
-                isRecording={isRecording}
-                isCountingIn={isCountingIn}
-                isPlaying={isPlaying}
-                hasArmedTrack={!!armedTrack}
-                hasRecordedTracks={hasRecordedTracks}
-                loopDuration={loopDuration}
-                onStartRecording={startRecording}
-                onStopRecording={stopRecording}
-                onPlay={play}
-                onStop={stop}
-                onSeekTo={seekTo}
-              />
-            </div>
+                {/* Cassette deck + transport (right) */}
+                <div className="flex flex-col items-center gap-2 flex-1 justify-center">
+                  <CassetteDeck
+                    isPlaying={isPlaying}
+                    isRecording={isRecording}
+                    sessionName={currentSessionName}
+                    onSetSessionName={setSessionName}
+                    loopDuration={loopDuration}
+                    currentTime={currentTime}
+                  />
+
+                  <TransportButtons
+                    isRecording={isRecording}
+                    isCountingIn={isCountingIn}
+                    isPlaying={isPlaying}
+                    hasArmedTrack={!!armedTrack}
+                    hasRecordedTracks={hasRecordedTracks}
+                    loopDuration={loopDuration}
+                    onStartRecording={startRecording}
+                    onStopRecording={stopRecording}
+                    onPlay={play}
+                    onStop={stop}
+                    onSeekTo={seekTo}
+                  />
+                </div>
+              </>
+            )}
           </div>
 
           {/* Bottom: Session drawer + device selector */}

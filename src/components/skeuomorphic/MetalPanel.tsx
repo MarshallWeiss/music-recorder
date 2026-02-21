@@ -1,5 +1,7 @@
 import { AudioEngine } from '../../audio/AudioEngine'
+import { useTuner } from '../../hooks/useTuner'
 import VUMeter from './VUMeter'
+import TunerDisplay from './TunerDisplay'
 import RotaryKnob from './RotaryKnob'
 import BeatIndicator from './BeatIndicator'
 import StatusLED from './StatusLED'
@@ -37,6 +39,8 @@ export default function MetalPanel({
   toggleCountIn,
   currentBeat,
 }: MetalPanelProps) {
+  const tuner = useTuner(engine)
+
   // Get analyser for VU meters
   // During playback: average all track analysers
   // During recording: use input analyser
@@ -70,6 +74,9 @@ export default function MetalPanel({
         <VUMeter analyser={getLeftAnalyser()} label="VU" width={180} height={110} />
         <VUMeter analyser={getRightAnalyser()} label="VU" width={180} height={110} />
       </div>
+
+      {/* Tuner */}
+      <TunerDisplay tuner={tuner} width={120} height={110} />
 
       <div className="flex-1" />
 

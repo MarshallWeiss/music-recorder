@@ -634,6 +634,26 @@ export class AudioEngine {
     return offline.startRendering()
   }
 
+  /**
+   * Mix two mono AudioBuffers together (additive bounce-down).
+   * Applies tanh soft limiting to prevent clipping with many layers.
+   * Result length = longer buffer's length.
+   */
+  mixBuffers(a: AudioBuffer, b: AudioBuffer): AudioBuffer {
+    if (!this.context) throw new Error('AudioEngine not initialized')
+    const length = Math.max(a.length, b.length)
+    const result = this.context.createBuffer(1, length, this.context.sampleRate)
+    const out = result.getChannelData(0)
+    const aData = a.getChannelData(0)
+    const bData = b.getChannelData(0)
+
+    for (let i = 0; i < length; i++) {
+      const sum = (i < aData.length ? aData[i] : 0) + (i < bData.length ? bData[i] : 0)
+      out[i] = Math.tanh(sum)
+    }
+    return result
+  }
+
   destroy(): void {
     this.stopAllPlayback()
     this.stopMetronome()

@@ -154,8 +154,15 @@ export class AudioEngine {
     // Buffer size 4096 is a good balance of latency vs CPU
     this.scriptProcessor = this.context.createScriptProcessor(4096, 1, 1)
 
+    // When recording to a fixed loop length, record extra samples to compensate
+    // for the latency trim in stopRecording(). Without this, overdub buffers end
+    // up shorter than the loop after trimming, causing periodic audio gaps.
+    const baseLatencyEst = this.context.baseLatency ?? 0
+    const scriptLatencyEst = 4096 / this.context.sampleRate
+    const latencyCompSamples = Math.round((baseLatencyEst + scriptLatencyEst) * this.context.sampleRate)
+
     const maxSamples = loopDuration
-      ? Math.ceil(loopDuration * this.context.sampleRate)
+      ? Math.ceil(loopDuration * this.context.sampleRate) + latencyCompSamples
       : Infinity
 
     // Preview: fixed 800 bins. Each bin covers samplesPerBin samples.

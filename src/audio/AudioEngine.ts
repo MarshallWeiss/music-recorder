@@ -222,17 +222,33 @@ export class AudioEngine {
 
     // Concatenate chunks into a single AudioBuffer
     const totalLength = this.recordingChunks.reduce((sum, chunk) => sum + chunk.length, 0)
-    const buffer = this.context.createBuffer(1, totalLength, this.context.sampleRate)
-    const channelData = buffer.getChannelData(0)
+    const raw = this.context.createBuffer(1, totalLength, this.context.sampleRate)
+    const rawData = raw.getChannelData(0)
 
     let offset = 0
     for (const chunk of this.recordingChunks) {
-      channelData.set(chunk, offset)
+      rawData.set(chunk, offset)
       offset += chunk.length
     }
 
     this.recordingChunks = []
-    return buffer
+
+    // Latency compensation: trim the start of the recorded buffer to align
+    // with monitor playback. Input latency comes from the OS audio pipeline
+    // (baseLatency) plus the ScriptProcessorNode buffer (4096 samples).
+    const baseLatency = this.context.baseLatency ?? 0
+    const scriptLatency = 4096 / this.context.sampleRate
+    const totalLatency = baseLatency + scriptLatency
+    const trimSamples = Math.round(totalLatency * this.context.sampleRate)
+
+    if (trimSamples > 0 && trimSamples < raw.length) {
+      const trimmedLength = raw.length - trimSamples
+      const buffer = this.context.createBuffer(1, trimmedLength, this.context.sampleRate)
+      buffer.getChannelData(0).set(rawData.subarray(trimSamples))
+      return buffer
+    }
+
+    return raw
   }
 
   /**

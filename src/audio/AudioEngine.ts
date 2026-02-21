@@ -24,6 +24,7 @@ export class AudioEngine {
   private playbackPans: StereoPannerNode[] = []
   private analysers: AnalyserNode[] = []
   private inputAnalyser: AnalyserNode | null = null
+  private tunerAnalyser: AnalyserNode | null = null
   private isCurrentlyPlaying = false
   private playStartTime = 0
   private playStartOffset = 0
@@ -119,6 +120,13 @@ export class AudioEngine {
     this.inputAnalyser = this.context!.createAnalyser()
     this.inputAnalyser.fftSize = 256
     this.inputGainNode.connect(this.inputAnalyser)
+
+    // Dedicated tuner analyser with large buffer for pitch detection
+    // 4096 fftSize → 2048 samples for getFloatTimeDomainData, accurate down to ~21Hz
+    this.tunerAnalyser = this.context!.createAnalyser()
+    this.tunerAnalyser.fftSize = 4096
+    this.tunerAnalyser.smoothingTimeConstant = 0
+    this.inputGainNode.connect(this.tunerAnalyser)
   }
 
   /**
@@ -512,6 +520,13 @@ export class AudioEngine {
    */
   getInputAnalyser(): AnalyserNode | null {
     return this.inputAnalyser
+  }
+
+  /**
+   * Get tuner analyser node (large buffer for pitch detection).
+   */
+  getTunerAnalyser(): AnalyserNode | null {
+    return this.tunerAnalyser
   }
 
   /**

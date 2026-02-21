@@ -1,5 +1,7 @@
+import { useState, useCallback } from 'react'
 import { AudioEngine } from '../../audio/AudioEngine'
 import { useTuner } from '../../hooks/useTuner'
+import { TUNINGS } from '../../audio/tunings'
 import VUMeter from './VUMeter'
 import TunerDisplay from './TunerDisplay'
 import RotaryKnob from './RotaryKnob'
@@ -40,6 +42,11 @@ export default function MetalPanel({
   currentBeat,
 }: MetalPanelProps) {
   const tuner = useTuner(engine)
+  const [tuningIndex, setTuningIndex] = useState(0)
+  const currentTuning = TUNINGS[tuningIndex]
+  const cycleTuning = useCallback(() => {
+    setTuningIndex((i) => (i + 1) % TUNINGS.length)
+  }, [])
 
   // Get analyser for VU meters
   // During playback: average all track analysers
@@ -76,7 +83,7 @@ export default function MetalPanel({
       </div>
 
       {/* Tuner */}
-      <TunerDisplay tuner={tuner} width={120} height={110} />
+      <TunerDisplay tuner={tuner} tuning={currentTuning} onCycleTuning={cycleTuning} width={120} height={110} />
 
       <div className="flex-1" />
 

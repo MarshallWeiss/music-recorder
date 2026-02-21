@@ -1,16 +1,19 @@
 import { useRef, useEffect } from 'react'
 import { TunerState } from '../../hooks/useTuner'
+import { Tuning, findClosestString } from '../../audio/tunings'
 
 interface TunerDisplayProps {
   tuner: TunerState
+  tuning: Tuning
+  onCycleTuning: () => void
   width?: number
   height?: number
 }
 
-export default function TunerDisplay({ tuner, width = 120, height = 110 }: TunerDisplayProps) {
+export default function TunerDisplay({ tuner, tuning, onCycleTuning, width = 120, height = 110 }: TunerDisplayProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const rafRef = useRef<number>(0)
-  const displayCentsRef = useRef(0) // for smooth animation independent of hook state
+  const displayCentsRef = useRef(0)
 
   useEffect(() => {
     const canvas = canvasRef.current
@@ -24,7 +27,6 @@ export default function TunerDisplay({ tuner, width = 120, height = 110 }: Tuner
     ctx.scale(dpr, dpr)
 
     const draw = () => {
-      // Smooth the cents animation
       const targetCents = tuner.isDetecting ? tuner.smoothedCents : 0
       displayCentsRef.current = displayCentsRef.current * 0.8 + targetCents * 0.2
 
@@ -46,6 +48,12 @@ export default function TunerDisplay({ tuner, width = 120, height = 110 }: Tuner
       const centerX = width / 2
       const isInTune = tuner.isDetecting && Math.abs(tuner.smoothedCents) <= 5
       const detecting = tuner.isDetecting
+      const hasStrings = tuning.strings.length > 0
+
+      // --- Target string indicator (non-chromatic tunings) ---
+      const closestString = detecting && tuner.noteInfo && hasStrings
+        ? findClosestString(tuner.noteInfo.note, tuner.rawFrequency ?? 0, tuning)
+        : null
 
       // --- Note Name ---
       const noteName = detecting && tuner.noteInfo ? tuner.noteInfo.noteName : '--'
@@ -55,11 +63,12 @@ export default function TunerDisplay({ tuner, width = 120, height = 110 }: Tuner
       ctx.textBaseline = 'middle'
 
       // Note name — large
+      const noteY = hasStrings ? height * 0.24 : height * 0.28
       ctx.font = 'bold 28px "Courier New", monospace'
       ctx.fillStyle = detecting
         ? (isInTune ? '#48bb78' : 'rgba(220, 210, 190, 0.9)')
         : 'rgba(220, 210, 190, 0.3)'
-      ctx.fillText(noteName, centerX - 4, height * 0.28)
+      ctx.fillText(noteName, centerX - 4, noteY)
 
       // Octave — smaller, offset right
       if (octave) {
@@ -68,13 +77,21 @@ export default function TunerDisplay({ tuner, width = 120, height = 110 }: Tuner
         ctx.font = 'bold 14px "Courier New", monospace'
         ctx.fillStyle = 'rgba(220, 210, 190, 0.5)'
         ctx.textAlign = 'left'
-        ctx.fillText(octave, centerX - 4 + actualNoteWidth / 2 + 2, height * 0.28 + 6)
+        ctx.fillText(octave, centerX - 4 + actualNoteWidth / 2 + 2, noteY + 6)
         ctx.textAlign = 'center'
+      }
+
+      // --- Target string label (e.g. "→ E2" or "str 6") ---
+      if (closestString && detecting) {
+        const stringNum = tuning.strings.length - closestString.stringIndex // 6=low E, 1=high E
+        ctx.font = '9px "Courier New", monospace'
+        ctx.fillStyle = isInTune ? 'rgba(72, 187, 120, 0.7)' : 'rgba(220, 210, 190, 0.4)'
+        ctx.fillText(`str ${stringNum} · ${closestString.stringNote}`, centerX, noteY + 18)
       }
 
       // --- In-tune glow ---
       if (isInTune && detecting) {
-        const tuneGlow = ctx.createRadialGradient(centerX, height * 0.28, 2, centerX, height * 0.28, 30)
+        const tuneGlow = ctx.createRadialGradient(centerX, noteY, 2, centerX, noteY, 30)
         tuneGlow.addColorStop(0, 'rgba(72, 187, 120, 0.15)')
         tuneGlow.addColorStop(1, 'rgba(72, 187, 120, 0)')
         ctx.fillStyle = tuneGlow
@@ -82,7 +99,7 @@ export default function TunerDisplay({ tuner, width = 120, height = 110 }: Tuner
       }
 
       // --- Cents Meter Bar ---
-      const meterY = height * 0.55
+      const meterY = hasStrings ? height * 0.6 : height * 0.55
       const meterWidth = width - 24
       const meterLeft = 12
       const meterHeight = 6
@@ -106,24 +123,23 @@ export default function TunerDisplay({ tuner, width = 120, height = 110 }: Tuner
 
       // Indicator dot
       if (detecting) {
-        const centsNorm = displayCentsRef.current / 50 // -1 to +1
+        const centsNorm = displayCentsRef.current / 50
         const clampedNorm = Math.max(-1, Math.min(1, centsNorm))
         const indicatorX = centerX + clampedNorm * (meterWidth / 2 - 4)
 
-        // Color based on how in-tune
         const absCents = Math.abs(displayCentsRef.current)
         let dotColor: string
         if (absCents <= 5) {
-          dotColor = '#48bb78' // green — in tune
+          dotColor = '#48bb78'
         } else if (absCents <= 20) {
-          dotColor = '#f5a623' // amber — close
+          dotColor = '#f5a623'
         } else {
-          dotColor = '#e53e3e' // red — way off
+          dotColor = '#e53e3e'
         }
 
         // Dot glow
         const dotGlow = ctx.createRadialGradient(indicatorX, meterY, 0, indicatorX, meterY, 8)
-        dotGlow.addColorStop(0, dotColor + '4d') // ~30% opacity hex
+        dotGlow.addColorStop(0, dotColor + '4d')
         dotGlow.addColorStop(1, 'rgba(0,0,0,0)')
         ctx.fillStyle = dotGlow
         ctx.fillRect(indicatorX - 8, meterY - 8, 16, 16)
@@ -171,7 +187,7 @@ export default function TunerDisplay({ tuner, width = 120, height = 110 }: Tuner
 
     rafRef.current = requestAnimationFrame(draw)
     return () => cancelAnimationFrame(rafRef.current)
-  }, [tuner, width, height])
+  }, [tuner, tuning, width, height])
 
   return (
     <div className="flex flex-col items-center gap-1">
@@ -182,9 +198,13 @@ export default function TunerDisplay({ tuner, width = 120, height = 110 }: Tuner
           className="rounded"
         />
       </div>
-      <span className="text-[9px] font-label uppercase tracking-wider text-engraved font-bold">
-        Tuner
-      </span>
+      <button
+        onClick={onCycleTuning}
+        className="text-[9px] font-label uppercase tracking-wider text-engraved font-bold hover:text-hw-600 transition-colors cursor-pointer no-select"
+        title={`Tuning: ${tuning.name} — click to change`}
+      >
+        Tuner · {tuning.shortName}
+      </button>
     </div>
   )
 }

@@ -99,12 +99,13 @@ export function useLooper(engine: AudioEngine | null, enabled: boolean): UseLoop
 
   const startOverdub = useCallback(() => {
     if (!engine || !compositeRef.current) return
-    // Play composite while recording new layer
+    // Capture current position before stopping so overdub continues seamlessly
+    const pos = engine.getCurrentTime()
     engine.stopAllPlayback()
     engine.startRecording(
       [{ buffer: compositeRef.current, volume: 1, pan: 0, muted: false }],
       loopDurationRef.current,
-      0,
+      pos,
     )
     setState('overdubbing')
     // Poll for auto-stop at loop boundary

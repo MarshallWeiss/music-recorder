@@ -13,9 +13,16 @@ export interface TunerState {
   isDetecting: boolean
 }
 
+// How many consecutive frames a new note must be detected before switching display
+const NOTE_HOLD_FRAMES = 4
+
 /**
  * Hook that reads from the AudioEngine's tuner analyser and runs pitch detection.
  * Passive — reads from the analyser without affecting recording or playback.
+ *
+ * Uses note hysteresis to prevent flickering between adjacent semitones:
+ * a new note must be detected for NOTE_HOLD_FRAMES consecutive frames
+ * before the displayed note switches.
  */
 export function useTuner(engine: AudioEngine | null): TunerState {
   const [noteInfo, setNoteInfo] = useState<NoteInfo | null>(null)
@@ -26,6 +33,12 @@ export function useTuner(engine: AudioEngine | null): TunerState {
   const rafRef = useRef<number>(0)
   const smoothedCentsRef = useRef(0)
   const noDetectionCountRef = useRef(0)
+
+  // Hysteresis state — stabilize note display
+  const currentNoteRef = useRef<string | null>(null) // e.g. "A4"
+  const candidateNoteRef = useRef<string | null>(null)
+  const candidateCountRef = useRef(0)
+  const candidateInfoRef = useRef<NoteInfo | null>(null)
 
   useEffect(() => {
     const analyser = engine?.getTunerAnalyser()
@@ -56,6 +69,9 @@ export function useTuner(engine: AudioEngine | null): TunerState {
           setIsDetecting(false)
           smoothedCentsRef.current = 0
           setSmoothedCents(0)
+          currentNoteRef.current = null
+          candidateNoteRef.current = null
+          candidateCountRef.current = 0
         }
         rafRef.current = requestAnimationFrame(detect)
         return
@@ -65,14 +81,46 @@ export function useTuner(engine: AudioEngine | null): TunerState {
 
       if (frequency !== null) {
         const info = frequencyToNote(frequency)
-        setNoteInfo(info)
         setRawFrequency(frequency)
         setIsDetecting(true)
         noDetectionCountRef.current = 0
 
-        // Smooth the cents display
+        // Smooth the cents display (always update, even before note switches)
         smoothedCentsRef.current = smoothedCentsRef.current * 0.7 + info.centsOff * 0.3
         setSmoothedCents(Math.round(smoothedCentsRef.current))
+
+        // Note hysteresis: only switch displayed note after consistent detection
+        if (info.note === currentNoteRef.current) {
+          // Same note — just update cents/frequency, keep displaying
+          setNoteInfo(info)
+          candidateNoteRef.current = null
+          candidateCountRef.current = 0
+        } else if (info.note === candidateNoteRef.current) {
+          // Same candidate — increment counter
+          candidateCountRef.current++
+          candidateInfoRef.current = info
+          if (candidateCountRef.current >= NOTE_HOLD_FRAMES) {
+            // Candidate confirmed — switch
+            currentNoteRef.current = info.note
+            setNoteInfo(info)
+            candidateNoteRef.current = null
+            candidateCountRef.current = 0
+            // Reset cents smoothing to the new note to avoid jump
+            smoothedCentsRef.current = info.centsOff
+            setSmoothedCents(info.centsOff)
+          }
+        } else {
+          // New candidate
+          candidateNoteRef.current = info.note
+          candidateCountRef.current = 1
+          candidateInfoRef.current = info
+        }
+
+        // If no note displayed yet (first detection), show immediately
+        if (currentNoteRef.current === null) {
+          currentNoteRef.current = info.note
+          setNoteInfo(info)
+        }
       } else {
         noDetectionCountRef.current++
         if (noDetectionCountRef.current > 15) {
@@ -81,6 +129,9 @@ export function useTuner(engine: AudioEngine | null): TunerState {
           setIsDetecting(false)
           smoothedCentsRef.current = 0
           setSmoothedCents(0)
+          currentNoteRef.current = null
+          candidateNoteRef.current = null
+          candidateCountRef.current = 0
         }
       }
 

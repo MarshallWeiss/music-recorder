@@ -71,46 +71,69 @@ export default function VUMeter({ analyser, label = 'VU', width = 140, height = 
       const pivotY = height * 0.85
       const arcRadius = height * 0.55
 
-      // Draw scale marks and numbers
-      const scaleMarks = [
+      // Scale marks: labeled marks (with numbers) and minor ticks (no number)
+      const scaleMarks: { db: number; label?: string }[] = [
         { db: -20, label: '20' },
         { db: -10, label: '10' },
-        { db: -7,  label: '7' },
+        { db: -7 },
         { db: -5,  label: '5' },
         { db: -3,  label: '3' },
-        { db: -1,  label: '1' },
         { db: 0,   label: '0' },
-        { db: 1,   label: '+1' },
-        { db: 2,   label: '+2' },
+        { db: 1 },
+        { db: 2 },
         { db: 3,   label: '+3' },
       ]
 
       ctx.font = '7px Helvetica Neue, sans-serif'
       ctx.textAlign = 'center'
 
+      // Helper: map dB to normalized 0-1 position on the arc
+      const dbToNorm = (db: number) =>
+        db <= 0
+          ? (db + 20) / 20 * 0.7
+          : 0.7 + (db / 3) * 0.3
+
       for (const mark of scaleMarks) {
-        // Map dB to 0-1 range (nonlinear: -20=0, 0=0.7, +3=1)
-        const normalized = mark.db <= 0
-          ? (mark.db + 20) / 20 * 0.7
-          : 0.7 + (mark.db / 3) * 0.3
+        const normalized = dbToNorm(mark.db)
         const angle = MIN_ANGLE + normalized * (MAX_ANGLE - MIN_ANGLE)
         const rad = (angle - 90) * Math.PI / 180
 
         // Tick
-        const innerR = arcRadius - 6
+        const isRedZone = mark.db >= 0
+        const tickLen = mark.label ? 6 : 4
         const outerR = arcRadius
+        const innerR = outerR - tickLen
         ctx.beginPath()
         ctx.moveTo(pivotX + innerR * Math.cos(rad), pivotY + innerR * Math.sin(rad))
         ctx.lineTo(pivotX + outerR * Math.cos(rad), pivotY + outerR * Math.sin(rad))
-        ctx.strokeStyle = mark.db >= 0 ? '#e53e3e' : 'rgba(220,210,190,0.7)'
+        ctx.strokeStyle = isRedZone ? '#e53e3e' : 'rgba(220,210,190,0.7)'
         ctx.lineWidth = mark.db === 0 ? 1.5 : 1
         ctx.stroke()
 
-        // Number
-        const labelR = arcRadius - 14
-        ctx.fillStyle = mark.db >= 0 ? '#e53e3e' : 'rgba(220,210,190,0.6)'
-        ctx.fillText(mark.label, pivotX + labelR * Math.cos(rad), pivotY + labelR * Math.sin(rad) + 2)
+        // Number (only for labeled marks)
+        if (mark.label) {
+          const labelR = arcRadius - 14
+          ctx.fillStyle = isRedZone ? '#e53e3e' : 'rgba(220,210,190,0.6)'
+          ctx.fillText(mark.label, pivotX + labelR * Math.cos(rad), pivotY + labelR * Math.sin(rad) + 2)
+        }
       }
+
+      // Draw the continuous arc between -20 and +3 in two segments
+      const arcStart = (MIN_ANGLE + dbToNorm(-20) * (MAX_ANGLE - MIN_ANGLE) - 90) * Math.PI / 180
+      const arcZero = (MIN_ANGLE + dbToNorm(0) * (MAX_ANGLE - MIN_ANGLE) - 90) * Math.PI / 180
+      const arcEnd = (MIN_ANGLE + dbToNorm(3) * (MAX_ANGLE - MIN_ANGLE) - 90) * Math.PI / 180
+
+      ctx.beginPath()
+      ctx.arc(pivotX, pivotY, arcRadius, arcStart, arcZero)
+      ctx.strokeStyle = 'rgba(220,210,190,0.35)'
+      ctx.lineWidth = 1
+      ctx.stroke()
+
+      ctx.beginPath()
+      ctx.arc(pivotX, pivotY, arcRadius, arcZero, arcEnd)
+      ctx.strokeStyle = 'rgba(229,62,62,0.5)'
+      ctx.lineWidth = 1
+      ctx.stroke()
 
       // Needle
       const needleAngle = MIN_ANGLE + levelRef.current * (MAX_ANGLE - MIN_ANGLE)

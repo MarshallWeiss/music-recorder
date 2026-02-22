@@ -87,25 +87,27 @@ export default function MetalPanel({
       {tunerVisible ? (
         <TunerDisplay tuner={tuner} tuning={currentTuning} onCycleTuning={cycleTuning} width={120} height={110} onClose={() => setTunerVisible(false)} />
       ) : (
-        <button
-          onClick={() => setTunerVisible(true)}
-          className="flex flex-col items-center justify-center gap-1 rounded shadow-vu-recess cursor-pointer transition-all hover:brightness-110"
-          style={{
-            width: 40,
-            height: 110,
-            background: '#2a2218',
-          }}
-          title="Show tuner"
-        >
-          {/* Tuning fork icon */}
-          <svg width="14" height="24" viewBox="0 0 14 24" fill="none" stroke="rgba(220,210,190,0.4)" strokeWidth="1.5" strokeLinecap="round">
-            <path d="M4 2v8a3 3 0 0 0 6 0V2" />
-            <path d="M7 10v12" />
-          </svg>
-          <span className="text-[7px] font-label uppercase tracking-wider font-bold" style={{ color: 'rgba(220,210,190,0.3)' }}>
+        <div className="flex flex-col items-center gap-1">
+          <button
+            onClick={() => setTunerVisible(true)}
+            className="flex items-center justify-center rounded cursor-pointer transition-all hover:brightness-125"
+            style={{
+              width: 28,
+              height: 28,
+              background: 'radial-gradient(circle at 38% 35%, #a09888, #706860 100%)',
+              boxShadow: '0 1px 3px rgba(0,0,0,0.3), inset 0 1px 0 rgba(255,255,255,0.1)',
+            }}
+            title="Show tuner"
+          >
+            <svg width="12" height="18" viewBox="0 0 12 20" fill="none" stroke="rgba(0,0,0,0.35)" strokeWidth="1.5" strokeLinecap="round">
+              <path d="M3 2v6a3 3 0 0 0 6 0V2" />
+              <path d="M6 8v10" />
+            </svg>
+          </button>
+          <span className="text-[7px] font-label uppercase tracking-wider text-engraved font-bold">
             Tuner
           </span>
-        </button>
+        </div>
       )}
 
       <div className="flex-1" />

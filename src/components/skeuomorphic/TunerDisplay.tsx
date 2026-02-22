@@ -6,11 +6,12 @@ interface TunerDisplayProps {
   tuner: TunerState
   tuning: Tuning
   onCycleTuning: () => void
+  onClose?: () => void
   width?: number
   height?: number
 }
 
-export default function TunerDisplay({ tuner, tuning, onCycleTuning, width = 120, height = 110 }: TunerDisplayProps) {
+export default function TunerDisplay({ tuner, tuning, onCycleTuning, onClose, width = 120, height = 110 }: TunerDisplayProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const rafRef = useRef<number>(0)
   const displayCentsRef = useRef(0)
@@ -198,13 +199,26 @@ export default function TunerDisplay({ tuner, tuning, onCycleTuning, width = 120
           className="rounded"
         />
       </div>
-      <button
-        onClick={onCycleTuning}
-        className="text-[9px] font-label uppercase tracking-wider text-engraved font-bold hover:text-hw-600 transition-colors cursor-pointer no-select"
-        title={`Tuning: ${tuning.name} — click to change`}
-      >
-        Tuner · {tuning.shortName}
-      </button>
+      <div className="flex items-center gap-1.5">
+        <button
+          onClick={onCycleTuning}
+          className="text-[9px] font-label uppercase tracking-wider text-engraved font-bold hover:text-hw-600 transition-colors cursor-pointer no-select"
+          title={`Tuning: ${tuning.name} — click to change`}
+        >
+          Tuner · {tuning.shortName}
+        </button>
+        {onClose && (
+          <button
+            onClick={onClose}
+            className="text-engraved hover:text-hw-600 transition-colors cursor-pointer no-select"
+            title="Hide tuner"
+          >
+            <svg width="8" height="8" viewBox="0 0 8 8" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round">
+              <path d="M1 1l6 6M7 1l-6 6" />
+            </svg>
+          </button>
+        )}
+      </div>
     </div>
   )
 }

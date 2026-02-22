@@ -24,7 +24,7 @@ const NOTE_HOLD_FRAMES = 4
  * a new note must be detected for NOTE_HOLD_FRAMES consecutive frames
  * before the displayed note switches.
  */
-export function useTuner(engine: AudioEngine | null): TunerState {
+export function useTuner(engine: AudioEngine | null, enabled: boolean = true): TunerState {
   const [noteInfo, setNoteInfo] = useState<NoteInfo | null>(null)
   const [rawFrequency, setRawFrequency] = useState<number | null>(null)
   const [smoothedCents, setSmoothedCents] = useState(0)
@@ -41,6 +41,10 @@ export function useTuner(engine: AudioEngine | null): TunerState {
   const candidateInfoRef = useRef<NoteInfo | null>(null)
 
   useEffect(() => {
+    if (!enabled) {
+      setIsDetecting(false)
+      return
+    }
     const analyser = engine?.getTunerAnalyser()
     if (!analyser) {
       setIsDetecting(false)
@@ -143,7 +147,7 @@ export function useTuner(engine: AudioEngine | null): TunerState {
     return () => {
       cancelAnimationFrame(rafRef.current)
     }
-  }, [engine])
+  }, [engine, enabled])
 
   return { noteInfo, rawFrequency, smoothedCents, isDetecting }
 }

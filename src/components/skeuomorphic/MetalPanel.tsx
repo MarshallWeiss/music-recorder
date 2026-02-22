@@ -41,7 +41,8 @@ export default function MetalPanel({
   toggleCountIn,
   currentBeat,
 }: MetalPanelProps) {
-  const tuner = useTuner(engine)
+  const [tunerVisible, setTunerVisible] = useState(false)
+  const tuner = useTuner(engine, tunerVisible)
   const [tuningIndex, setTuningIndex] = useState(0)
   const currentTuning = TUNINGS[tuningIndex]
   const cycleTuning = useCallback(() => {
@@ -82,8 +83,30 @@ export default function MetalPanel({
         <VUMeter analyser={getRightAnalyser()} label="VU" width={180} height={110} />
       </div>
 
-      {/* Tuner */}
-      <TunerDisplay tuner={tuner} tuning={currentTuning} onCycleTuning={cycleTuning} width={120} height={110} />
+      {/* Tuner — collapsible */}
+      {tunerVisible ? (
+        <TunerDisplay tuner={tuner} tuning={currentTuning} onCycleTuning={cycleTuning} width={120} height={110} onClose={() => setTunerVisible(false)} />
+      ) : (
+        <button
+          onClick={() => setTunerVisible(true)}
+          className="flex flex-col items-center justify-center gap-1 rounded shadow-vu-recess cursor-pointer transition-all hover:brightness-110"
+          style={{
+            width: 40,
+            height: 110,
+            background: '#2a2218',
+          }}
+          title="Show tuner"
+        >
+          {/* Tuning fork icon */}
+          <svg width="14" height="24" viewBox="0 0 14 24" fill="none" stroke="rgba(220,210,190,0.4)" strokeWidth="1.5" strokeLinecap="round">
+            <path d="M4 2v8a3 3 0 0 0 6 0V2" />
+            <path d="M7 10v12" />
+          </svg>
+          <span className="text-[7px] font-label uppercase tracking-wider font-bold" style={{ color: 'rgba(220,210,190,0.3)' }}>
+            Tuner
+          </span>
+        </button>
+      )}
 
       <div className="flex-1" />
 

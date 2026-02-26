@@ -8,7 +8,6 @@ import CassetteDeck from './components/skeuomorphic/CassetteDeck'
 import TransportButtons from './components/skeuomorphic/TransportButtons'
 import LooperView from './components/skeuomorphic/LooperView'
 import SessionDrawer from './components/skeuomorphic/SessionDrawer'
-import DeviceSelector from './components/DeviceSelector'
 
 export default function App() {
   const {
@@ -138,6 +137,9 @@ export default function App() {
             toggleMetronomeAudible={toggleMetronomeAudible}
             toggleCountIn={toggleCountIn}
             currentBeat={currentBeat}
+            devices={devices}
+            selectedDeviceId={selectedDeviceId}
+            onSelectDevice={selectDevice}
           />
 
           {/* Mode toggle — recessed toggle strip */}
@@ -183,41 +185,35 @@ export default function App() {
             </div>
           </div>
 
-          {/* Cassette deck — always in the same position regardless of mode */}
-          <div className="flex justify-center py-4">
-            <CassetteDeck
-              isPlaying={isLooperMode ? (looper.state === 'playing' || looper.state === 'overdubbing') : isPlaying}
-              isRecording={isLooperMode ? (looper.state === 'recording' || looper.state === 'overdubbing') : isRecording}
-              sessionName={currentSessionName}
-              onSetSessionName={setSessionName}
-              loopDuration={isLooperMode ? looper.loopDuration : loopDuration}
-              currentTime={isLooperMode ? looper.currentTime : currentTime}
-            />
-          </div>
-
-          {/* Middle: Mixer + Transport (multitrack) or Stomp (looper) */}
-          <div className="flex items-stretch flex-1 px-6 pb-5 gap-5">
+          {/* Middle: Cassette+Transport (left) | Mixer (right) OR Looper */}
+          <div className={`flex flex-1 px-6 py-4 gap-8 ${isLooperMode ? 'flex-col items-center justify-center' : 'items-start justify-center'}`}>
             {isLooperMode ? (
-              <LooperView
-                looper={looper}
-                onStompClick={handleStompClick}
-              />
+              <>
+                <CassetteDeck
+                  isPlaying={looper.state === 'playing' || looper.state === 'overdubbing'}
+                  isRecording={looper.state === 'recording' || looper.state === 'overdubbing'}
+                  sessionName={currentSessionName}
+                  onSetSessionName={setSessionName}
+                  loopDuration={looper.loopDuration}
+                  currentTime={looper.currentTime}
+                />
+                <LooperView
+                  looper={looper}
+                  onStompClick={handleStompClick}
+                />
+              </>
             ) : (
               <>
-                {/* Mixer section (left) */}
-                <MixerSection
-                  tracks={tracks}
-                  onArmTrack={armTrack}
-                  onSetVolume={setVolume}
-                  onSetPan={setPan}
-                  onToggleMute={toggleMute}
-                  onToggleSolo={toggleSolo}
-                  onClearTrack={clearTrack}
-                  onRenameTrack={renameTrack}
-                />
-
-                {/* Transport (right) */}
-                <div className="flex flex-col items-center gap-4 flex-1 justify-center">
+                {/* Left column: Cassette deck + Transport */}
+                <div className="flex flex-col items-center gap-4">
+                  <CassetteDeck
+                    isPlaying={isPlaying}
+                    isRecording={isRecording}
+                    sessionName={currentSessionName}
+                    onSetSessionName={setSessionName}
+                    loopDuration={loopDuration}
+                    currentTime={currentTime}
+                  />
                   <TransportButtons
                     isRecording={isRecording}
                     isCountingIn={isCountingIn}
@@ -232,11 +228,23 @@ export default function App() {
                     onSeekTo={seekTo}
                   />
                 </div>
+
+                {/* Right column: Mixer */}
+                <MixerSection
+                  tracks={tracks}
+                  onArmTrack={armTrack}
+                  onSetVolume={setVolume}
+                  onSetPan={setPan}
+                  onToggleMute={toggleMute}
+                  onToggleSolo={toggleSolo}
+                  onClearTrack={clearTrack}
+                  onRenameTrack={renameTrack}
+                />
               </>
             )}
           </div>
 
-          {/* Bottom: Session drawer + device selector */}
+          {/* Bottom: Session drawer */}
           <div className="border-t border-hw-400/20">
             <SessionDrawer
               sessions={sessions}
@@ -251,18 +259,6 @@ export default function App() {
               isExporting={isExporting}
               hasRecordedTracks={hasRecordedTracks}
             />
-
-            {/* Device selector */}
-            <div className="flex items-center gap-2 px-3 pb-2">
-              <span className="text-[8px] font-label uppercase tracking-wider text-engraved font-bold">
-                Input
-              </span>
-              <DeviceSelector
-                devices={devices}
-                selectedDeviceId={selectedDeviceId}
-                onSelect={selectDevice}
-              />
-            </div>
           </div>
         </div>
 

@@ -24,15 +24,8 @@ export default function MixerSection({
 }: MixerSectionProps) {
   return (
     <div className="flex flex-col flex-shrink-0">
-      {/* Panel label */}
-      <div className="px-2 py-1.5">
-        <span className="text-[9px] font-label uppercase tracking-[0.2em] text-engraved font-bold">
-          Mixer
-        </span>
-      </div>
-
       {/* Channel strips container */}
-      <div className="flex flex-1 rounded mx-1 mb-2"
+      <div className="flex flex-1 rounded"
         style={{
           background: 'linear-gradient(180deg, #dcd0b8 0%, #d0c4ac 30%, #c8bca4 70%, #c0b49c 100%)',
           boxShadow: `

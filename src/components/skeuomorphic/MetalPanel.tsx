@@ -1,5 +1,5 @@
-import { useState, useCallback } from 'react'
-import { AudioEngine } from '../../audio/AudioEngine'
+import { useState, useCallback, useRef, useEffect } from 'react'
+import { AudioEngine, AudioDevice } from '../../audio/AudioEngine'
 import { useTuner } from '../../hooks/useTuner'
 import { TUNINGS } from '../../audio/tunings'
 import VUMeter from './VUMeter'
@@ -23,6 +23,9 @@ interface MetalPanelProps {
   toggleMetronomeAudible: () => void
   toggleCountIn: () => void
   currentBeat: number
+  devices: AudioDevice[]
+  selectedDeviceId: string | null
+  onSelectDevice: (deviceId: string) => void
 }
 
 export default function MetalPanel({
@@ -40,6 +43,9 @@ export default function MetalPanel({
   toggleMetronomeAudible,
   toggleCountIn,
   currentBeat,
+  devices,
+  selectedDeviceId,
+  onSelectDevice,
 }: MetalPanelProps) {
   const [tunerVisible, setTunerVisible] = useState(false)
   const tuner = useTuner(engine, tunerVisible)
@@ -48,6 +54,27 @@ export default function MetalPanel({
   const cycleTuning = useCallback(() => {
     setTuningIndex((i) => (i + 1) % TUNINGS.length)
   }, [])
+
+  // Device dropdown state
+  const [deviceDropdownOpen, setDeviceDropdownOpen] = useState(false)
+  const dropdownRef = useRef<HTMLDivElement>(null)
+
+  // Close dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(e.target as Node)) {
+        setDeviceDropdownOpen(false)
+      }
+    }
+    if (deviceDropdownOpen) {
+      document.addEventListener('mousedown', handleClickOutside)
+    }
+    return () => document.removeEventListener('mousedown', handleClickOutside)
+  }, [deviceDropdownOpen])
+
+  // Get selected device label
+  const selectedDevice = devices.find(d => d.deviceId === selectedDeviceId)
+  const deviceLabel = selectedDevice?.label || 'No device'
 
   // Get analyser for VU meters
   // During playback: average all track analysers
@@ -80,51 +107,84 @@ export default function MetalPanel({
       borderBottom: '1px solid rgba(20,15,5,0.15)',
       boxShadow: '0 2px 8px rgba(20,15,5,0.15), inset 0 1px 0 rgba(255,250,240,0.12)',
     }}>
-      {/* VU Meters */}
-      <div className="flex items-center gap-3">
+      {/* Input gain with device selector (left) - fixed width to match right controls */}
+      <div className="flex flex-col items-center gap-0.5 relative w-[200px] shrink-0" ref={dropdownRef}>
+        <RotaryKnob
+          value={gainToKnob(inputGain)}
+          onChange={(v) => setInputGain(knobToGain(v))}
+          size="lg"
+          ticks={9}
+        />
+        <button
+          onClick={() => devices.length > 1 && setDeviceDropdownOpen(!deviceDropdownOpen)}
+          className={`text-[9px] font-label uppercase tracking-wider text-engraved font-bold text-center max-w-full ${devices.length > 1 ? 'cursor-pointer hover:text-hw-700' : ''}`}
+          title={devices.length > 1 ? 'Select input device' : deviceLabel}
+        >
+          {deviceLabel}
+        </button>
+
+        {/* Device dropdown */}
+        {deviceDropdownOpen && devices.length > 1 && (
+          <div
+            className="absolute top-full mt-1 z-50 rounded shadow-lg py-1 min-w-[160px]"
+            style={{
+              background: 'linear-gradient(180deg, #e8e0d0 0%, #d8d0c0 100%)',
+              border: '1px solid #a09888',
+            }}
+          >
+            {devices.map((d) => (
+              <button
+                key={d.deviceId}
+                onClick={() => {
+                  onSelectDevice(d.deviceId)
+                  setDeviceDropdownOpen(false)
+                }}
+                className={`w-full text-left px-3 py-1.5 text-[10px] font-label hover:bg-hw-300/50 ${
+                  d.deviceId === selectedDeviceId ? 'bg-hw-400/30 font-bold' : ''
+                }`}
+                style={{ color: '#4a3a28' }}
+              >
+                {d.label}
+              </button>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {/* VU Meters (center) */}
+      <div className="flex items-center gap-3 flex-1 justify-center">
         <VUMeter analyser={getLeftAnalyser()} label="L" width={190} height={120} />
         <VUMeter analyser={getRightAnalyser()} label="R" width={190} height={120} />
       </div>
 
-      {/* Tuner — collapsible */}
-      {tunerVisible ? (
-        <TunerDisplay tuner={tuner} tuning={currentTuning} onCycleTuning={cycleTuning} width={120} height={110} onClose={() => setTunerVisible(false)} />
-      ) : (
-        <div className="flex flex-col items-center gap-1">
-          <button
-            onClick={() => setTunerVisible(true)}
-            className="flex items-center justify-center rounded cursor-pointer transition-all hover:brightness-125"
-            style={{
-              width: 28,
-              height: 28,
-              background: 'radial-gradient(circle at 42% 38%, #b0a898, #807870 60%, #686058 100%)',
-              boxShadow: '0 1px 3px rgba(20,15,5,0.35), 0 3px 6px rgba(20,15,5,0.1), inset 0 1px 0 rgba(255,250,240,0.15)',
-            }}
-            title="Show tuner"
-          >
-            <svg width="12" height="18" viewBox="0 0 12 20" fill="none" stroke="rgba(0,0,0,0.35)" strokeWidth="1.5" strokeLinecap="round">
-              <path d="M3 2v6a3 3 0 0 0 6 0V2" />
-              <path d="M6 8v10" />
-            </svg>
-          </button>
-          <span className="text-[7px] font-label uppercase tracking-wider text-engraved font-bold">
-            Tuner
-          </span>
-        </div>
-      )}
-
-      <div className="flex-1" />
-
-      {/* Master knobs */}
-      <div className="flex items-center gap-5">
-        {/* Input gain */}
-        <RotaryKnob
-          value={gainToKnob(inputGain)}
-          onChange={(v) => setInputGain(knobToGain(v))}
-          label="Input"
-          size="lg"
-          ticks={9}
-        />
+      {/* Right side controls - fixed width to match left for centering */}
+      <div className="flex items-center gap-5 w-[200px] shrink-0 justify-end">
+        {/* Tuner — collapsible */}
+        {tunerVisible ? (
+          <TunerDisplay tuner={tuner} tuning={currentTuning} onCycleTuning={cycleTuning} width={120} height={110} onClose={() => setTunerVisible(false)} />
+        ) : (
+          <div className="flex flex-col items-center gap-1">
+            <button
+              onClick={() => setTunerVisible(true)}
+              className="flex items-center justify-center rounded cursor-pointer transition-all hover:brightness-125"
+              style={{
+                width: 28,
+                height: 28,
+                background: 'radial-gradient(circle at 42% 38%, #b0a898, #807870 60%, #686058 100%)',
+                boxShadow: '0 1px 3px rgba(20,15,5,0.35), 0 3px 6px rgba(20,15,5,0.1), inset 0 1px 0 rgba(255,250,240,0.15)',
+              }}
+              title="Show tuner"
+            >
+              <svg width="12" height="18" viewBox="0 0 12 20" fill="none" stroke="rgba(0,0,0,0.35)" strokeWidth="1.5" strokeLinecap="round">
+                <path d="M3 2v6a3 3 0 0 0 6 0V2" />
+                <path d="M6 8v10" />
+              </svg>
+            </button>
+            <span className="text-[7px] font-label uppercase tracking-wider text-engraved font-bold">
+              Tuner
+            </span>
+          </div>
+        )}
 
         {/* BPM / Tempo */}
         <div className="flex flex-col items-center gap-0.5">

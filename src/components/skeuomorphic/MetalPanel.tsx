@@ -76,11 +76,14 @@ export default function MetalPanel({
   const knobToGain = (v: number) => v * 10
 
   return (
-    <div className="texture-metal rounded-t-sm px-6 py-4 flex items-center gap-6">
+    <div className="texture-metal px-6 py-5 flex items-center gap-6" style={{
+      borderBottom: '1px solid rgba(20,15,5,0.15)',
+      boxShadow: '0 2px 8px rgba(20,15,5,0.15), inset 0 1px 0 rgba(255,250,240,0.12)',
+    }}>
       {/* VU Meters */}
       <div className="flex items-center gap-3">
-        <VUMeter analyser={getLeftAnalyser()} label="VU" width={180} height={110} />
-        <VUMeter analyser={getRightAnalyser()} label="VU" width={180} height={110} />
+        <VUMeter analyser={getLeftAnalyser()} label="L" width={190} height={120} />
+        <VUMeter analyser={getRightAnalyser()} label="R" width={190} height={120} />
       </div>
 
       {/* Tuner — collapsible */}
@@ -94,8 +97,8 @@ export default function MetalPanel({
             style={{
               width: 28,
               height: 28,
-              background: 'radial-gradient(circle at 38% 35%, #a09888, #706860 100%)',
-              boxShadow: '0 1px 3px rgba(0,0,0,0.3), inset 0 1px 0 rgba(255,255,255,0.1)',
+              background: 'radial-gradient(circle at 42% 38%, #b0a898, #807870 60%, #686058 100%)',
+              boxShadow: '0 1px 3px rgba(20,15,5,0.35), 0 3px 6px rgba(20,15,5,0.1), inset 0 1px 0 rgba(255,250,240,0.15)',
             }}
             title="Show tuner"
           >
@@ -146,8 +149,8 @@ export default function MetalPanel({
               }`}
               style={{
                 background: metronomeOn
-                  ? 'radial-gradient(circle, #4a6a8a 0%, #3a5a7a 100%)'
-                  : 'radial-gradient(circle at 38% 35%, #b0a898, #807870 100%)',
+                  ? 'radial-gradient(circle at 45% 40%, #5a7a9a, #4a6a8a 50%, #3a5a7a 100%)'
+                  : 'radial-gradient(circle at 42% 38%, #b0a898, #908880 50%, #706860 100%)',
               }}
               title={metronomeOn ? 'Stop metronome' : 'Start metronome'}
             >
@@ -163,8 +166,8 @@ export default function MetalPanel({
                 }`}
                 style={{
                   background: !metronomeAudible
-                    ? 'radial-gradient(circle, #8a7a4a 0%, #6a5a3a 100%)'
-                    : 'radial-gradient(circle at 38% 35%, #a09888, #706860 100%)',
+                    ? 'radial-gradient(circle at 45% 40%, #8a7a4a, #6a5a3a 50%, #5a4a2a 100%)'
+                    : 'radial-gradient(circle at 42% 38%, #a09888, #808078 50%, #686058 100%)',
                 }}
                 title={metronomeAudible ? 'Switch to visual-only (silent)' : 'Switch to audible clicks'}
               >

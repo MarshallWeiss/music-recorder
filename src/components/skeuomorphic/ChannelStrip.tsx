@@ -85,15 +85,16 @@ export default function ChannelStrip({
       {/* Arm button */}
       <button
         onClick={onArmTrack}
-        className={`w-5 h-5 rounded-full flex items-center justify-center transition-all ${
-          track.isArmed
-            ? 'shadow-button-down bg-red-900/40 border border-red-700/50'
-            : 'shadow-button-up border border-hw-400/30 hover:border-hw-400/50'
-        }`}
+        className="rounded-full flex items-center justify-center transition-all"
         style={{
+          width: 24,
+          height: 24,
           background: track.isArmed
-            ? 'radial-gradient(circle, #5a2020 0%, #3a1010 100%)'
-            : 'radial-gradient(circle at 38% 35%, #c0b8a8, #a09890 100%)',
+            ? 'radial-gradient(circle at 45% 40%, #8a2020, #6a1414 50%, #4a0e0e 100%)'
+            : 'radial-gradient(circle at 38% 35%, #c0b8a8, #a09890 55%, #807870 100%)',
+          boxShadow: track.isArmed
+            ? 'inset 0 2px 4px rgba(0,0,0,0.5), 0 0 8px rgba(220,40,40,0.3)'
+            : '0 2px 5px rgba(20,15,5,0.4), inset 0 1px 0 rgba(255,250,240,0.2)',
         }}
         title="Arm for recording"
       >
@@ -103,15 +104,19 @@ export default function ChannelStrip({
       {/* Mute button */}
       <button
         onClick={onToggleMute}
-        className={`w-6 h-4 rounded-sm flex items-center justify-center text-[8px] font-bold transition-all ${
-          track.muted
-            ? 'shadow-button-down bg-hw-600 text-red-400'
-            : 'shadow-button-up text-hw-500'
-        }`}
+        className="flex items-center justify-center text-[8px] font-bold transition-all"
         style={{
+          width: 28,
+          height: 18,
+          borderRadius: 3,
           background: track.muted
-            ? '#4a2a28'
-            : 'linear-gradient(180deg, #c8c0b0 0%, #a8a090 100%)',
+            ? 'linear-gradient(180deg, #6a3230 0%, #5a2a28 30%, #4a1e1c 100%)'
+            : 'linear-gradient(180deg, #d0c8b8 0%, #b8b0a0 30%, #a09890 100%)',
+          color: track.muted ? '#ff6666' : 'rgba(60,50,40,0.5)',
+          boxShadow: track.muted
+            ? 'inset 0 2px 3px rgba(0,0,0,0.4)'
+            : '0 2px 3px rgba(20,15,5,0.3), inset 0 1px 0 rgba(255,250,240,0.2), inset 0 -1px 0 rgba(20,15,5,0.1)',
+          transform: track.muted ? 'translateY(1px)' : 'none',
         }}
         title="Mute"
       >
@@ -121,15 +126,19 @@ export default function ChannelStrip({
       {/* Solo button */}
       <button
         onClick={onToggleSolo}
-        className={`w-6 h-4 rounded-sm flex items-center justify-center text-[8px] font-bold transition-all ${
-          track.solo
-            ? 'shadow-button-down text-yellow-400'
-            : 'shadow-button-up text-hw-500'
-        }`}
+        className="flex items-center justify-center text-[8px] font-bold transition-all"
         style={{
+          width: 28,
+          height: 18,
+          borderRadius: 3,
           background: track.solo
-            ? '#4a4020'
-            : 'linear-gradient(180deg, #c8c0b0 0%, #a8a090 100%)',
+            ? 'linear-gradient(180deg, #6a5a28 0%, #5a4a20 30%, #4a3a18 100%)'
+            : 'linear-gradient(180deg, #d0c8b8 0%, #b8b0a0 30%, #a09890 100%)',
+          color: track.solo ? '#ffd644' : 'rgba(60,50,40,0.5)',
+          boxShadow: track.solo
+            ? 'inset 0 2px 3px rgba(0,0,0,0.4)'
+            : '0 2px 3px rgba(20,15,5,0.3), inset 0 1px 0 rgba(255,250,240,0.2), inset 0 -1px 0 rgba(20,15,5,0.1)',
+          transform: track.solo ? 'translateY(1px)' : 'none',
         }}
         title="Solo"
       >
@@ -178,7 +187,7 @@ export default function ChannelStrip({
             onClick={onClearTrack}
             className="w-5 h-5 rounded-full flex items-center justify-center shadow-button-up hover:brightness-110 transition-all"
             style={{
-              background: 'radial-gradient(circle at 38% 35%, #c0b0a0, #907870 100%)',
+              background: 'radial-gradient(circle at 42% 38%, #c0b0a0, #a09080 50%, #807060 100%)',
             }}
             title="Delete recording"
           >

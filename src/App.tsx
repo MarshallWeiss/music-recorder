@@ -140,45 +140,66 @@ export default function App() {
             currentBeat={currentBeat}
           />
 
-          {/* Mode toggle */}
-          <div className="flex items-center justify-center gap-3 py-1.5 border-b border-hw-400/10">
-            <button
-              onClick={toggleMode}
-              className={`px-3 py-1 rounded text-[9px] font-label uppercase tracking-wider font-bold transition-all ${
-                !isLooperMode ? 'shadow-button-down' : 'shadow-button-up'
-              }`}
-              style={{
-                background: !isLooperMode
-                  ? 'radial-gradient(circle, #4a6a8a 0%, #3a5a7a 100%)'
-                  : 'radial-gradient(circle at 38% 35%, #a09888, #706860 100%)',
-                color: !isLooperMode ? 'rgba(200,210,230,0.9)' : 'rgba(0,0,0,0.35)',
-              }}
-            >
-              4-Track
-            </button>
-            <button
-              onClick={toggleMode}
-              className={`px-3 py-1 rounded text-[9px] font-label uppercase tracking-wider font-bold transition-all ${
-                isLooperMode ? 'shadow-button-down' : 'shadow-button-up'
-              }`}
-              style={{
-                background: isLooperMode
-                  ? 'radial-gradient(circle, #4a6a8a 0%, #3a5a7a 100%)'
-                  : 'radial-gradient(circle at 38% 35%, #a09888, #706860 100%)',
-                color: isLooperMode ? 'rgba(200,210,230,0.9)' : 'rgba(0,0,0,0.35)',
-              }}
-            >
-              Looper
-            </button>
+          {/* Mode toggle — recessed toggle strip */}
+          <div className="flex items-center justify-center py-2" style={{
+            borderBottom: '1px solid rgba(20,15,5,0.06)',
+          }}>
+            <div className="flex rounded-sm overflow-hidden" style={{
+              boxShadow: 'inset 0 2px 4px rgba(20,15,5,0.25), inset 0 -1px 0 rgba(255,250,240,0.1), 0 1px 0 rgba(255,250,240,0.08)',
+              background: 'linear-gradient(180deg, #c4bca8 0%, #bab2a0 100%)',
+            }}>
+              <button
+                onClick={(e) => { toggleMode(); (e.target as HTMLElement).blur() }}
+                tabIndex={-1}
+                className="px-4 py-1.5 text-[9px] font-label uppercase tracking-wider font-bold transition-all no-select"
+                style={{
+                  background: !isLooperMode
+                    ? 'linear-gradient(180deg, #506880 0%, #3a5a7a 40%, #2a4a6a 100%)'
+                    : 'transparent',
+                  color: !isLooperMode ? 'rgba(200,220,240,0.95)' : 'rgba(60,50,40,0.45)',
+                  boxShadow: !isLooperMode
+                    ? 'inset 0 2px 4px rgba(0,0,0,0.3), inset 0 -1px 0 rgba(255,250,240,0.06)'
+                    : 'none',
+                }}
+              >
+                4-Track
+              </button>
+              <button
+                onClick={(e) => { toggleMode(); (e.target as HTMLElement).blur() }}
+                tabIndex={-1}
+                className="px-4 py-1.5 text-[9px] font-label uppercase tracking-wider font-bold transition-all no-select"
+                style={{
+                  background: isLooperMode
+                    ? 'linear-gradient(180deg, #506880 0%, #3a5a7a 40%, #2a4a6a 100%)'
+                    : 'transparent',
+                  color: isLooperMode ? 'rgba(200,220,240,0.95)' : 'rgba(60,50,40,0.45)',
+                  boxShadow: isLooperMode
+                    ? 'inset 0 2px 4px rgba(0,0,0,0.3), inset 0 -1px 0 rgba(255,250,240,0.06)'
+                    : 'none',
+                }}
+              >
+                Looper
+              </button>
+            </div>
+          </div>
+
+          {/* Cassette deck — always in the same position regardless of mode */}
+          <div className="flex justify-center py-4">
+            <CassetteDeck
+              isPlaying={isLooperMode ? (looper.state === 'playing' || looper.state === 'overdubbing') : isPlaying}
+              isRecording={isLooperMode ? (looper.state === 'recording' || looper.state === 'overdubbing') : isRecording}
+              sessionName={currentSessionName}
+              onSetSessionName={setSessionName}
+              loopDuration={isLooperMode ? looper.loopDuration : loopDuration}
+              currentTime={isLooperMode ? looper.currentTime : currentTime}
+            />
           </div>
 
           {/* Middle: Mixer + Transport (multitrack) or Stomp (looper) */}
-          <div className="flex items-stretch flex-1 px-4 py-4 gap-4">
+          <div className="flex items-stretch flex-1 px-6 pb-5 gap-5">
             {isLooperMode ? (
               <LooperView
                 looper={looper}
-                sessionName={currentSessionName}
-                onSetSessionName={setSessionName}
                 onStompClick={handleStompClick}
               />
             ) : (
@@ -195,17 +216,8 @@ export default function App() {
                   onRenameTrack={renameTrack}
                 />
 
-                {/* Cassette deck + transport (right) */}
-                <div className="flex flex-col items-center gap-2 flex-1 justify-center">
-                  <CassetteDeck
-                    isPlaying={isPlaying}
-                    isRecording={isRecording}
-                    sessionName={currentSessionName}
-                    onSetSessionName={setSessionName}
-                    loopDuration={loopDuration}
-                    currentTime={currentTime}
-                  />
-
+                {/* Transport (right) */}
+                <div className="flex flex-col items-center gap-4 flex-1 justify-center">
                   <TransportButtons
                     isRecording={isRecording}
                     isCountingIn={isCountingIn}

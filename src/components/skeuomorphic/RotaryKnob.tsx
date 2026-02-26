@@ -10,9 +10,9 @@ interface RotaryKnobProps {
 }
 
 const SIZE_MAP = {
-  sm: { outer: 32, knob: 26, tickLen: 3, labelSize: 'text-[8px]' },
-  md: { outer: 48, knob: 38, tickLen: 4, labelSize: 'text-[9px]' },
-  lg: { outer: 60, knob: 48, tickLen: 5, labelSize: 'text-[10px]' },
+  sm: { outer: 34, knob: 28, tickLen: 3, labelSize: 'text-[8px]' },
+  md: { outer: 50, knob: 40, tickLen: 4, labelSize: 'text-[9px]' },
+  lg: { outer: 64, knob: 52, tickLen: 5, labelSize: 'text-[10px]' },
 }
 
 // Map 0-1 to -135deg to +135deg (270-degree sweep)
@@ -78,11 +78,14 @@ export default function RotaryKnob({
         y1={cy + innerR * Math.sin(rad)}
         x2={cx + outerR * Math.cos(rad)}
         y2={cy + outerR * Math.sin(rad)}
-        stroke="rgba(0,0,0,0.35)"
+        stroke="rgba(20,15,5,0.45)"
         strokeWidth="1"
       />
     )
   }
+
+  const isDark = size === 'sm'
+  const knobR = s.knob / 2
 
   return (
     <div className="flex flex-col items-center gap-1 no-select">
@@ -97,29 +100,59 @@ export default function RotaryKnob({
           {tickMarks}
         </svg>
 
-        {/* Knob body */}
+        {/* Knob body — 3D sphere with directional lighting */}
         <div
-          className={`absolute rounded-full cursor-grab active:cursor-grabbing ${
-            size === 'sm' ? 'knob-body-dark shadow-knob-sm' : 'knob-body shadow-knob'
-          }`}
+          className="absolute rounded-full cursor-grab active:cursor-grabbing"
           style={{
             width: s.knob,
             height: s.knob,
             top: (s.outer - s.knob) / 2,
             left: (s.outer - s.knob) / 2,
+            background: isDark
+              ? `
+                radial-gradient(circle at 62% 68%, rgba(0,0,0,0.25), transparent 45%),
+                radial-gradient(circle at 38% 32%, #787068, #585048 45%, #484038 70%, #383430 100%)
+              `
+              : `
+                radial-gradient(circle at 62% 68%, rgba(20,15,5,0.25), transparent 45%),
+                radial-gradient(circle at 38% 32%, #ccc4b4, #a8a090 40%, #888078 65%, #686058 100%)
+              `,
+            boxShadow: isDark
+              ? `
+                0 2px 5px rgba(20,15,5,0.5),
+                0 5px 12px rgba(20,15,5,0.15),
+                inset 0 1px 0 rgba(255,250,240,0.12),
+                inset 0 -1px 0 rgba(20,15,5,0.2)
+              `
+              : `
+                0 3px 8px rgba(20,15,5,0.5),
+                0 6px 16px rgba(20,15,5,0.2),
+                inset 0 1px 0 rgba(255,250,240,0.25),
+                inset 0 -1px 0 rgba(20,15,5,0.2)
+              `,
           }}
           onMouseDown={handleMouseDown}
         >
+          {/* Knurled edge ring */}
+          <div
+            className="absolute rounded-full pointer-events-none"
+            style={{
+              inset: 1,
+              border: isDark ? '1px solid rgba(255,250,240,0.04)' : '1px solid rgba(255,250,240,0.08)',
+            }}
+          />
+
           {/* Indicator line */}
           <div
             className="absolute left-1/2 rounded-full"
             style={{
               width: 2,
               height: s.knob * 0.35,
-              top: s.knob * 0.12,
+              top: s.knob * 0.1,
               marginLeft: -1,
-              background: 'white',
-              transformOrigin: `center ${s.knob * 0.38}px`,
+              background: isDark ? 'rgba(255,250,240,0.7)' : 'rgba(255,250,240,0.9)',
+              boxShadow: '0 0 3px rgba(20,15,5,0.5), 0 1px 2px rgba(20,15,5,0.4)',
+              transformOrigin: `center ${knobR - s.knob * 0.1}px`,
               transform: `rotate(${angle}deg)`,
             }}
           />

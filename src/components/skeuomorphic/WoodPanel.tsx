@@ -6,13 +6,21 @@ export default function WoodPanel({ side }: WoodPanelProps) {
   return (
     <div
       className={`texture-wood flex-shrink-0 ${
-        side === 'left' ? 'rounded-l-lg' : 'rounded-r-lg'
+        side === 'left' ? 'rounded-l-xl' : 'rounded-r-xl'
       }`}
       style={{
-        width: 40,
+        width: 56,
         boxShadow: side === 'left'
-          ? 'inset -2px 0 4px rgba(0,0,0,0.3)'
-          : 'inset 2px 0 4px rgba(0,0,0,0.3)',
+          ? `
+            inset -4px 0 12px rgba(20,15,5,0.45),
+            inset -1px 0 3px rgba(20,15,5,0.3),
+            inset 2px 0 6px rgba(255,250,240,0.04)
+          `
+          : `
+            inset 4px 0 12px rgba(20,15,5,0.45),
+            inset 1px 0 3px rgba(20,15,5,0.3),
+            inset -2px 0 6px rgba(255,250,240,0.04)
+          `,
       }}
     />
   )

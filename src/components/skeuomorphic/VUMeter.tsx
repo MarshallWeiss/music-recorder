@@ -16,6 +16,10 @@ export default function VUMeter({ analyser, label = 'VU', width = 140, height = 
   const levelRef = useRef(0) // smoothed display level (0-1)
   const rafRef = useRef<number>(0)
   const dataRef = useRef<Uint8Array<ArrayBuffer> | null>(null)
+  const analyserRef = useRef<AnalyserNode | null>(null)
+
+  // Keep analyser ref in sync — avoids restarting animation loop on prop change
+  analyserRef.current = analyser
 
   useEffect(() => {
     const canvas = canvasRef.current
@@ -30,13 +34,14 @@ export default function VUMeter({ analyser, label = 'VU', width = 140, height = 
     ctx.scale(dpr, dpr)
 
     const draw = () => {
-      // Read analyser data
+      // Read analyser data from ref (always current, no effect restart needed)
+      const currentAnalyser = analyserRef.current
       let targetLevel = 0
-      if (analyser) {
-        if (!dataRef.current || dataRef.current.length !== analyser.frequencyBinCount) {
-          dataRef.current = new Uint8Array(analyser.frequencyBinCount)
+      if (currentAnalyser) {
+        if (!dataRef.current || dataRef.current.length !== currentAnalyser.frequencyBinCount) {
+          dataRef.current = new Uint8Array(currentAnalyser.frequencyBinCount)
         }
-        analyser.getByteTimeDomainData(dataRef.current)
+        currentAnalyser.getByteTimeDomainData(dataRef.current)
         // Compute RMS
         let sum = 0
         for (let i = 0; i < dataRef.current.length; i++) {
@@ -53,17 +58,28 @@ export default function VUMeter({ analyser, label = 'VU', width = 140, height = 
       // Clear
       ctx.clearRect(0, 0, width, height)
 
-      // Meter face background
-      ctx.fillStyle = '#2a2218'
+      // Meter face background — warm cream/ivory like a real VU face
+      const faceBg = ctx.createRadialGradient(width / 2, height * 0.5, 10, width / 2, height * 0.5, width * 0.65)
+      faceBg.addColorStop(0, '#f4ead4')
+      faceBg.addColorStop(0.6, '#e8dcc4')
+      faceBg.addColorStop(1, '#d8ccb4')
+      ctx.fillStyle = faceBg
       ctx.beginPath()
-      ctx.roundRect(0, 0, width, height, 4)
+      ctx.roundRect(0, 0, width, height, 6)
       ctx.fill()
 
-      // Warm amber glow
-      const glow = ctx.createRadialGradient(width / 2, height * 0.9, 10, width / 2, height * 0.9, width * 0.6)
-      glow.addColorStop(0, 'rgba(245, 166, 35, 0.15)')
-      glow.addColorStop(1, 'rgba(245, 166, 35, 0)')
-      ctx.fillStyle = glow
+      // Vignette — darker edges
+      const vignette = ctx.createRadialGradient(width / 2, height * 0.5, width * 0.25, width / 2, height * 0.5, width * 0.65)
+      vignette.addColorStop(0, 'rgba(0,0,0,0)')
+      vignette.addColorStop(1, 'rgba(20,15,5,0.12)')
+      ctx.fillStyle = vignette
+      ctx.fillRect(0, 0, width, height)
+
+      // Glass highlight — top dome reflection
+      const glass = ctx.createRadialGradient(width * 0.3, height * 0.12, 2, width * 0.35, height * 0.2, width * 0.45)
+      glass.addColorStop(0, 'rgba(255, 255, 255, 0.15)')
+      glass.addColorStop(1, 'rgba(255, 255, 255, 0)')
+      ctx.fillStyle = glass
       ctx.fillRect(0, 0, width, height)
 
       // Scale arc
@@ -100,20 +116,20 @@ export default function VUMeter({ analyser, label = 'VU', width = 140, height = 
 
         // Tick
         const isRedZone = mark.db >= 0
-        const tickLen = mark.label ? 6 : 4
+        const tickLen = mark.label ? 7 : 4
         const outerR = arcRadius
         const innerR = outerR - tickLen
         ctx.beginPath()
         ctx.moveTo(pivotX + innerR * Math.cos(rad), pivotY + innerR * Math.sin(rad))
         ctx.lineTo(pivotX + outerR * Math.cos(rad), pivotY + outerR * Math.sin(rad))
-        ctx.strokeStyle = isRedZone ? '#e53e3e' : 'rgba(220,210,190,0.7)'
+        ctx.strokeStyle = isRedZone ? '#c82020' : '#2a2218'
         ctx.lineWidth = mark.db === 0 ? 1.5 : 1
         ctx.stroke()
 
         // Number (only for labeled marks)
         if (mark.label) {
           const labelR = arcRadius - 14
-          ctx.fillStyle = isRedZone ? '#e53e3e' : 'rgba(220,210,190,0.6)'
+          ctx.fillStyle = isRedZone ? '#c82020' : '#2a2218'
           ctx.fillText(mark.label, pivotX + labelR * Math.cos(rad), pivotY + labelR * Math.sin(rad) + 2)
         }
       }
@@ -125,50 +141,69 @@ export default function VUMeter({ analyser, label = 'VU', width = 140, height = 
 
       ctx.beginPath()
       ctx.arc(pivotX, pivotY, arcRadius, arcStart, arcZero)
-      ctx.strokeStyle = 'rgba(220,210,190,0.35)'
+      ctx.strokeStyle = 'rgba(30,25,15,0.25)'
       ctx.lineWidth = 1
       ctx.stroke()
 
       ctx.beginPath()
       ctx.arc(pivotX, pivotY, arcRadius, arcZero, arcEnd)
-      ctx.strokeStyle = 'rgba(229,62,62,0.5)'
+      ctx.strokeStyle = 'rgba(200,32,32,0.4)'
       ctx.lineWidth = 1
       ctx.stroke()
 
-      // Needle
+      // Needle — tapered, black
       const needleAngle = MIN_ANGLE + levelRef.current * (MAX_ANGLE - MIN_ANGLE)
       const needleRad = (needleAngle - 90) * Math.PI / 180
-      const needleLen = arcRadius + 4
+      const needleLen = arcRadius + 6
 
+      // Draw tapered needle (thick at pivot, thin at tip)
+      const tipX = pivotX + needleLen * Math.cos(needleRad)
+      const tipY = pivotY + needleLen * Math.sin(needleRad)
+      const perpX = Math.sin(needleRad)
+      const perpY = -Math.cos(needleRad)
+      const baseWidth = 2.5
       ctx.beginPath()
-      ctx.moveTo(pivotX, pivotY)
-      ctx.lineTo(pivotX + needleLen * Math.cos(needleRad), pivotY + needleLen * Math.sin(needleRad))
-      ctx.strokeStyle = '#1a1610'
-      ctx.lineWidth = 1.5
-      ctx.stroke()
-
-      // Needle pivot dot
-      ctx.beginPath()
-      ctx.arc(pivotX, pivotY, 3, 0, Math.PI * 2)
+      ctx.moveTo(pivotX + perpX * baseWidth, pivotY + perpY * baseWidth)
+      ctx.lineTo(tipX, tipY)
+      ctx.lineTo(pivotX - perpX * baseWidth, pivotY - perpY * baseWidth)
+      ctx.closePath()
       ctx.fillStyle = '#1a1610'
       ctx.fill()
 
+      // Needle pivot screw
+      const pivotGrad = ctx.createRadialGradient(pivotX - 1, pivotY - 1, 0, pivotX, pivotY, 4)
+      pivotGrad.addColorStop(0, '#4a4440')
+      pivotGrad.addColorStop(0.5, '#2a2622')
+      pivotGrad.addColorStop(1, '#1a1610')
+      ctx.beginPath()
+      ctx.arc(pivotX, pivotY, 4, 0, Math.PI * 2)
+      ctx.fillStyle = pivotGrad
+      ctx.fill()
+
       // VU label
-      ctx.font = 'bold 10px Helvetica Neue, sans-serif'
-      ctx.fillStyle = 'rgba(220,210,190,0.5)'
+      ctx.font = 'bold 11px Helvetica Neue, sans-serif'
+      ctx.fillStyle = '#2a2218'
       ctx.textAlign = 'center'
-      ctx.fillText(label, width / 2, height * 0.55)
+      ctx.fillText('VU', width / 2, height * 0.52)
 
       rafRef.current = requestAnimationFrame(draw)
     }
 
     rafRef.current = requestAnimationFrame(draw)
     return () => cancelAnimationFrame(rafRef.current)
-  }, [analyser, width, height, label])
+  }, [width, height])
 
   return (
-    <div className="flex flex-col items-center gap-1">
-      <div className="rounded shadow-vu-recess p-0.5">
+    <div className="flex flex-col items-center gap-1.5">
+      <div className="rounded-lg p-1" style={{
+        background: 'linear-gradient(180deg, #2a2218 0%, #3a3020 100%)',
+        boxShadow: `
+          inset 0 3px 10px rgba(0,0,0,0.6),
+          inset 0 1px 3px rgba(0,0,0,0.4),
+          inset 0 -1px 2px rgba(255,250,240,0.06),
+          0 1px 0 rgba(255,250,240,0.08)
+        `,
+      }}>
         <canvas
           ref={canvasRef}
           style={{ width, height }}

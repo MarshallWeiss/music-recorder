@@ -43,6 +43,7 @@ export default function StompButton({ looper, onClick }: StompButtonProps) {
       {/* Stomp button */}
       <button
         onClick={onClick}
+        tabIndex={-1}
         className="relative rounded-full cursor-pointer transition-transform active:translate-y-0.5 active:scale-[0.98] no-select"
         style={{
           width: 100,

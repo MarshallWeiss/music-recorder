@@ -25,20 +25,27 @@ export default function MixerSection({
   return (
     <div className="flex flex-col flex-shrink-0">
       {/* Panel label */}
-      <div className="px-2 py-1">
-        <span className="text-[8px] font-label uppercase tracking-[0.2em] text-engraved font-bold">
+      <div className="px-2 py-1.5">
+        <span className="text-[9px] font-label uppercase tracking-[0.2em] text-engraved font-bold">
           Mixer
         </span>
       </div>
 
       {/* Channel strips container */}
-      <div className="flex flex-1 shadow-inset-groove rounded-sm mx-1 mb-2"
+      <div className="flex flex-1 rounded mx-1 mb-2"
         style={{
-          background: 'linear-gradient(180deg, #d8ccb4 0%, #ccc0a8 100%)',
+          background: 'linear-gradient(180deg, #dcd0b8 0%, #d0c4ac 30%, #c8bca4 70%, #c0b49c 100%)',
+          boxShadow: `
+            inset 0 3px 8px rgba(20,15,5,0.3),
+            inset 0 -2px 4px rgba(255,250,240,0.08),
+            inset 2px 0 4px rgba(20,15,5,0.1),
+            inset -2px 0 4px rgba(20,15,5,0.1),
+            0 1px 0 rgba(255,250,240,0.1)
+          `,
         }}
       >
         {tracks.map((track, i) => (
-          <div key={track.id} className={`${i > 0 ? 'border-l border-hw-400/30' : ''}`}>
+          <div key={track.id} className={`${i > 0 ? 'border-l border-hw-400/20' : ''}`}>
             <ChannelStrip
               track={track}
               onArmTrack={() => onArmTrack(track.id)}

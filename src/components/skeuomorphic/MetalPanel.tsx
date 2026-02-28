@@ -1,9 +1,11 @@
 import { useState, useCallback, useRef, useEffect } from 'react'
 import { AudioEngine, AudioDevice } from '../../audio/AudioEngine'
 import { useTuner } from '../../hooks/useTuner'
-import { TUNINGS } from '../../audio/tunings'
+import { Tuning, TUNINGS } from '../../audio/tunings'
+import { loadCustomTunings, saveCustomTunings, loadSelectedTuningName, saveSelectedTuningName } from '../../storage/tuningStore'
 import VUMeter from './VUMeter'
 import TunerDisplay from './TunerDisplay'
+import TuningDropdown from './TuningDropdown'
 import RotaryKnob from './RotaryKnob'
 import BeatIndicator from './BeatIndicator'
 import StatusLED from './StatusLED'
@@ -49,17 +51,72 @@ export default function MetalPanel({
 }: MetalPanelProps) {
   const [tunerVisible, setTunerVisible] = useState(false)
   const tuner = useTuner(engine, tunerVisible)
-  const [tuningIndex, setTuningIndex] = useState(0)
-  const currentTuning = TUNINGS[tuningIndex]
-  const cycleTuning = useCallback(() => {
-    setTuningIndex((i) => (i + 1) % TUNINGS.length)
+
+  // Tuning state — name-based for persistence
+  const [allTunings, setAllTunings] = useState<Tuning[]>(TUNINGS)
+  const [currentTuningName, setCurrentTuningName] = useState('Standard')
+  const [tuningDropdownOpen, setTuningDropdownOpen] = useState(false)
+  const tuningDropdownRef = useRef<HTMLDivElement>(null)
+
+  const currentTuning = allTunings.find(t => t.name === currentTuningName) || allTunings[1]
+
+  // Load custom tunings + saved selection on mount
+  useEffect(() => {
+    async function load() {
+      const custom = await loadCustomTunings()
+      if (custom.length > 0) {
+        setAllTunings([...TUNINGS, ...custom])
+      }
+      const savedName = await loadSelectedTuningName()
+      setCurrentTuningName(savedName)
+    }
+    load()
   }, [])
+
+  // Close tuning dropdown on click outside
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (tuningDropdownRef.current && !tuningDropdownRef.current.contains(e.target as Node)) {
+        setTuningDropdownOpen(false)
+      }
+    }
+    if (tuningDropdownOpen) {
+      document.addEventListener('mousedown', handleClickOutside)
+    }
+    return () => document.removeEventListener('mousedown', handleClickOutside)
+  }, [tuningDropdownOpen])
+
+  const handleSelectTuning = useCallback((tuning: Tuning) => {
+    setCurrentTuningName(tuning.name)
+    saveSelectedTuningName(tuning.name)
+    setTuningDropdownOpen(false)
+  }, [])
+
+  const handleSaveCustomTuning = useCallback(async (tuning: Tuning) => {
+    const custom = await loadCustomTunings()
+    const updated = [...custom, tuning]
+    await saveCustomTunings(updated)
+    setAllTunings([...TUNINGS, ...updated])
+    setCurrentTuningName(tuning.name)
+    saveSelectedTuningName(tuning.name)
+  }, [])
+
+  const handleDeleteCustomTuning = useCallback(async (tuning: Tuning) => {
+    const custom = await loadCustomTunings()
+    const updated = custom.filter(t => t.name !== tuning.name)
+    await saveCustomTunings(updated)
+    setAllTunings([...TUNINGS, ...updated])
+    if (currentTuningName === tuning.name) {
+      setCurrentTuningName('Standard')
+      saveSelectedTuningName('Standard')
+    }
+  }, [currentTuningName])
 
   // Device dropdown state
   const [deviceDropdownOpen, setDeviceDropdownOpen] = useState(false)
   const dropdownRef = useRef<HTMLDivElement>(null)
 
-  // Close dropdown when clicking outside
+  // Close device dropdown when clicking outside
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
       if (dropdownRef.current && !dropdownRef.current.contains(e.target as Node)) {
@@ -77,20 +134,18 @@ export default function MetalPanel({
   const deviceLabel = selectedDevice?.label || 'No device'
 
   // Get analyser for VU meters
-  // During playback: average all track analysers
-  // During recording: use input analyser
+  // During playback: show mix of playing tracks
+  // Otherwise: always show live input level (like a traditional input meter)
   const getLeftAnalyser = () => {
     if (!engine) return null
-    if (isRecording) return engine.getInputAnalyser()
-    if (isPlaying) return engine.getAnalyser(0) ?? engine.getAnalyser(1)
-    return null
+    if (isPlaying && !isRecording) return engine.getAnalyser(0) ?? engine.getAnalyser(1)
+    return engine.getInputAnalyser()
   }
 
   const getRightAnalyser = () => {
     if (!engine) return null
-    if (isRecording) return engine.getInputAnalyser()
-    if (isPlaying) return engine.getAnalyser(2) ?? engine.getAnalyser(1) ?? engine.getAnalyser(0)
-    return null
+    if (isPlaying && !isRecording) return engine.getAnalyser(2) ?? engine.getAnalyser(1) ?? engine.getAnalyser(0)
+    return engine.getInputAnalyser()
   }
 
   // BPM knob: map 60-200 to 0-1
@@ -157,51 +212,112 @@ export default function MetalPanel({
         <VUMeter analyser={getRightAnalyser()} label="R" width={190} height={120} />
       </div>
 
-      {/* Right side controls - fixed width to match left for centering */}
-      <div className="flex items-center gap-5 w-[200px] shrink-0 justify-end">
-        {/* Tuner — collapsible */}
-        {tunerVisible ? (
-          <TunerDisplay tuner={tuner} tuning={currentTuning} onCycleTuning={cycleTuning} width={120} height={110} onClose={() => setTunerVisible(false)} />
-        ) : (
+      {/* Right side controls */}
+      <div className="flex items-center gap-4 shrink-0 justify-end">
+        {/* Tuner expanded panel */}
+        {tunerVisible && (
+          <div className="relative" ref={tuningDropdownRef}>
+            <TunerDisplay
+              tuner={tuner}
+              tuning={currentTuning}
+              onTuningClick={() => setTuningDropdownOpen(!tuningDropdownOpen)}
+              width={120}
+              height={110}
+            />
+            {tuningDropdownOpen && (
+              <TuningDropdown
+                allTunings={allTunings}
+                currentTuning={currentTuning}
+                onSelect={handleSelectTuning}
+                onSaveCustom={handleSaveCustomTuning}
+                onDeleteCustom={handleDeleteCustomTuning}
+              />
+            )}
+          </div>
+        )}
+
+        {/* Metronome expanded panel */}
+        {metronomeOn && (
+          <div className="flex items-center gap-3">
+            <div className="flex flex-col items-center gap-0.5">
+              <RotaryKnob
+                value={bpmToKnob(bpm)}
+                onChange={(v) => setBpm(knobToBpm(v))}
+                size="lg"
+                ticks={9}
+              />
+              <span className="text-[9px] font-mono text-hw-600 font-bold">{bpm}</span>
+            </div>
+            <div className="flex flex-col items-center gap-1.5">
+              <BeatIndicator currentBeat={currentBeat} metronomeOn={metronomeOn} />
+              <div className="flex items-center gap-1.5">
+                {/* Audible/Visual toggle */}
+                <button
+                  onClick={toggleMetronomeAudible}
+                  className={`w-5 h-5 rounded-full flex items-center justify-center transition-all ${
+                    !metronomeAudible ? 'shadow-button-down' : 'shadow-button-up'
+                  }`}
+                  style={{
+                    background: !metronomeAudible
+                      ? 'radial-gradient(circle at 45% 40%, #8a7a4a, #6a5a3a 50%, #5a4a2a 100%)'
+                      : 'radial-gradient(circle at 42% 38%, #a09888, #808078 50%, #686058 100%)',
+                  }}
+                  title={metronomeAudible ? 'Switch to visual-only (silent)' : 'Switch to audible clicks'}
+                >
+                  <svg width="9" height="9" viewBox="0 0 12 12" fill="none" stroke={metronomeAudible ? 'rgba(0,0,0,0.4)' : 'rgba(200,180,100,0.8)'} strokeWidth="1.5" strokeLinecap="round">
+                    <path d="M2 4.5h1.5L6 2.5v7l-2.5-2H2v-3z" fill={metronomeAudible ? 'rgba(0,0,0,0.2)' : 'rgba(200,180,100,0.4)'} />
+                    {!metronomeAudible && <path d="M8 4l3 3M11 4l-3 3" />}
+                    {metronomeAudible && <path d="M8.5 3.5a3.5 3.5 0 0 1 0 5" />}
+                  </svg>
+                </button>
+                {/* Count-in toggle */}
+                <button
+                  onClick={toggleCountIn}
+                  className={`flex items-center gap-0.5 px-1 py-0.5 rounded transition-all ${
+                    countInEnabled ? 'shadow-button-down' : 'shadow-button-up'
+                  }`}
+                  style={{
+                    background: countInEnabled
+                      ? 'radial-gradient(circle, #4a6a8a 0%, #3a5a7a 100%)'
+                      : 'radial-gradient(circle at 38% 35%, #a09888, #706860 100%)',
+                  }}
+                  title={countInEnabled ? 'Count-in enabled (1 bar before overdub)' : 'Count-in disabled'}
+                >
+                  <StatusLED active={countInEnabled} color="amber" size="sm" />
+                  <span className="text-[6px] font-label uppercase tracking-wider font-bold" style={{ color: countInEnabled ? 'rgba(200,180,100,0.9)' : 'rgba(0,0,0,0.3)' }}>
+                    C-In
+                  </span>
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Toggle button row — always visible */}
+        <div className="flex items-center gap-3">
+          {/* Tuner toggle */}
           <div className="flex flex-col items-center gap-1">
             <button
-              onClick={() => setTunerVisible(true)}
-              className="flex items-center justify-center rounded cursor-pointer transition-all hover:brightness-125"
+              onClick={() => { setTunerVisible(v => !v); setTuningDropdownOpen(false) }}
+              className={`w-7 h-7 rounded-full flex items-center justify-center transition-all ${
+                tunerVisible ? 'shadow-button-down' : 'shadow-button-up'
+              }`}
               style={{
-                width: 28,
-                height: 28,
-                background: 'radial-gradient(circle at 42% 38%, #b0a898, #807870 60%, #686058 100%)',
-                boxShadow: '0 1px 3px rgba(20,15,5,0.35), 0 3px 6px rgba(20,15,5,0.1), inset 0 1px 0 rgba(255,250,240,0.15)',
+                background: tunerVisible
+                  ? 'radial-gradient(circle at 45% 40%, #4a6a9a, #3a5a8a 50%, #2a4a7a 100%)'
+                  : 'radial-gradient(circle at 42% 38%, #b0a898, #908880 50%, #706860 100%)',
               }}
-              title="Show tuner"
+              title={tunerVisible ? 'Hide tuner' : 'Show tuner'}
             >
-              <svg width="12" height="18" viewBox="0 0 12 20" fill="none" stroke="rgba(0,0,0,0.35)" strokeWidth="1.5" strokeLinecap="round">
-                <path d="M3 2v6a3 3 0 0 0 6 0V2" />
-                <path d="M6 8v10" />
-              </svg>
+              <StatusLED active={tunerVisible} color="blue" size="sm" />
             </button>
             <span className="text-[7px] font-label uppercase tracking-wider text-engraved font-bold">
               Tuner
             </span>
           </div>
-        )}
 
-        {/* BPM / Tempo */}
-        <div className="flex flex-col items-center gap-0.5">
-          <RotaryKnob
-            value={bpmToKnob(bpm)}
-            onChange={(v) => setBpm(knobToBpm(v))}
-            label="Tempo"
-            size="lg"
-            ticks={9}
-          />
-          <span className="text-[9px] font-mono text-hw-600 font-bold">{bpm}</span>
-        </div>
-
-        {/* Metronome + Count-in */}
-        <div className="flex flex-col items-center gap-1.5">
-          <div className="flex items-center gap-2">
-            {/* Metronome on/off */}
+          {/* Metronome toggle */}
+          <div className="flex flex-col items-center gap-1">
             <button
               onClick={toggleMetronome}
               className={`w-7 h-7 rounded-full flex items-center justify-center transition-all ${
@@ -216,57 +332,10 @@ export default function MetalPanel({
             >
               <StatusLED active={metronomeOn} color={metronomeAudible ? 'green' : 'amber'} size="sm" />
             </button>
-
-            {/* Audio/Visual toggle (only visible when metronome is on) */}
-            {metronomeOn && (
-              <button
-                onClick={toggleMetronomeAudible}
-                className={`w-5 h-5 rounded-full flex items-center justify-center transition-all ${
-                  !metronomeAudible ? 'shadow-button-down' : 'shadow-button-up'
-                }`}
-                style={{
-                  background: !metronomeAudible
-                    ? 'radial-gradient(circle at 45% 40%, #8a7a4a, #6a5a3a 50%, #5a4a2a 100%)'
-                    : 'radial-gradient(circle at 42% 38%, #a09888, #808078 50%, #686058 100%)',
-                }}
-                title={metronomeAudible ? 'Switch to visual-only (silent)' : 'Switch to audible clicks'}
-              >
-                {/* Speaker icon: muted or not */}
-                <svg width="9" height="9" viewBox="0 0 12 12" fill="none" stroke={metronomeAudible ? 'rgba(0,0,0,0.4)' : 'rgba(200,180,100,0.8)'} strokeWidth="1.5" strokeLinecap="round">
-                  <path d="M2 4.5h1.5L6 2.5v7l-2.5-2H2v-3z" fill={metronomeAudible ? 'rgba(0,0,0,0.2)' : 'rgba(200,180,100,0.4)'} />
-                  {!metronomeAudible && <path d="M8 4l3 3M11 4l-3 3" />}
-                  {metronomeAudible && <path d="M8.5 3.5a3.5 3.5 0 0 1 0 5" />}
-                </svg>
-              </button>
-            )}
-          </div>
-
-          <BeatIndicator currentBeat={currentBeat} metronomeOn={metronomeOn} />
-
-          <div className="flex items-center gap-2">
-            <span className="text-[8px] font-label uppercase tracking-wider text-engraved font-bold">
+            <span className="text-[7px] font-label uppercase tracking-wider text-engraved font-bold">
               Metro
             </span>
           </div>
-
-          {/* Count-in toggle */}
-          <button
-            onClick={toggleCountIn}
-            className={`flex items-center gap-1 px-1.5 py-0.5 rounded transition-all ${
-              countInEnabled ? 'shadow-button-down' : 'shadow-button-up'
-            }`}
-            style={{
-              background: countInEnabled
-                ? 'radial-gradient(circle, #4a6a8a 0%, #3a5a7a 100%)'
-                : 'radial-gradient(circle at 38% 35%, #a09888, #706860 100%)',
-            }}
-            title={countInEnabled ? 'Count-in enabled (1 bar before overdub)' : 'Count-in disabled'}
-          >
-            <StatusLED active={countInEnabled} color="amber" size="sm" />
-            <span className="text-[7px] font-label uppercase tracking-wider font-bold" style={{ color: countInEnabled ? 'rgba(200,180,100,0.9)' : 'rgba(0,0,0,0.3)' }}>
-              Count In
-            </span>
-          </button>
         </div>
       </div>
     </div>

@@ -1,6 +1,6 @@
 interface StatusLEDProps {
   active: boolean
-  color: 'red' | 'green' | 'amber'
+  color: 'red' | 'green' | 'amber' | 'blue'
   pulse?: boolean
   size?: 'sm' | 'md'
 }
@@ -9,6 +9,7 @@ const COLOR_MAP = {
   red:   { on: 'bg-red-500',    shadow: 'shadow-led-red' },
   green: { on: 'bg-green-500',  shadow: 'shadow-led-green' },
   amber: { on: 'bg-vu-amber',   shadow: 'shadow-led-amber' },
+  blue:  { on: 'bg-blue-400',   shadow: 'shadow-led-blue' },
 }
 
 export default function StatusLED({ active, color, pulse, size = 'sm' }: StatusLEDProps) {

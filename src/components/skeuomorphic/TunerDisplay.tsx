@@ -5,13 +5,25 @@ import { Tuning, findClosestString } from '../../audio/tunings'
 interface TunerDisplayProps {
   tuner: TunerState
   tuning: Tuning
-  onCycleTuning: () => void
-  onClose?: () => void
+  onTuningClick: () => void
   width?: number
   height?: number
 }
 
-export default function TunerDisplay({ tuner, tuning, onCycleTuning, onClose, width = 120, height = 110 }: TunerDisplayProps) {
+// LED count and arc geometry
+const NUM_LEDS = 13
+const ARC_START = Math.PI * 0.82  // arc start angle (left)
+const ARC_END = Math.PI * 0.18    // arc end angle (right)
+
+function ledColor(index: number, center: number): string {
+  // Center LEDs green, middle orange, edges red
+  const dist = Math.abs(index - center)
+  if (dist <= 1) return '#48bb78' // green
+  if (dist <= 3) return '#f5a623' // amber/orange
+  return '#e53e3e'                // red
+}
+
+export default function TunerDisplay({ tuner, tuning, onTuningClick, width = 120, height = 110 }: TunerDisplayProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const rafRef = useRef<number>(0)
   const displayCentsRef = useRef(0)
@@ -47,9 +59,70 @@ export default function TunerDisplay({ tuner, tuning, onCycleTuning, onClose, wi
       ctx.fillRect(0, 0, width, height)
 
       const centerX = width / 2
-      const isInTune = tuner.isDetecting && Math.abs(tuner.smoothedCents) <= 5
       const detecting = tuner.isDetecting
+      const isInTune = detecting && Math.abs(tuner.smoothedCents) <= 5
       const hasStrings = tuning.strings.length > 0
+
+      // --- LED Sweep Arc ---
+      const arcCenterX = centerX
+      const arcCenterY = height * 0.48
+      const arcRadius = width * 0.38
+      const ledRadius = 3
+      const centerLed = Math.floor(NUM_LEDS / 2)
+
+      // Map cents to active LED position (0 = leftmost, NUM_LEDS-1 = rightmost)
+      const cents = displayCentsRef.current
+      const activeLedFloat = centerLed + (cents / 50) * centerLed
+      const activeLed = Math.round(Math.max(0, Math.min(NUM_LEDS - 1, activeLedFloat)))
+
+      for (let i = 0; i < NUM_LEDS; i++) {
+        // Position along arc
+        const t = i / (NUM_LEDS - 1)
+        const angle = ARC_START + t * (ARC_END - ARC_START)
+        const x = arcCenterX + Math.cos(angle) * arcRadius
+        const y = arcCenterY - Math.sin(angle) * arcRadius
+
+        const isActive = detecting && i === activeLed
+        const color = ledColor(i, centerLed)
+
+        if (isActive) {
+          // LED glow
+          const ledGlow = ctx.createRadialGradient(x, y, 0, x, y, ledRadius * 4)
+          ledGlow.addColorStop(0, color + '66')
+          ledGlow.addColorStop(1, 'rgba(0,0,0,0)')
+          ctx.fillStyle = ledGlow
+          ctx.fillRect(x - ledRadius * 4, y - ledRadius * 4, ledRadius * 8, ledRadius * 8)
+
+          // Bright LED
+          ctx.beginPath()
+          ctx.arc(x, y, ledRadius, 0, Math.PI * 2)
+          ctx.fillStyle = color
+          ctx.fill()
+        } else {
+          // Dim LED
+          ctx.beginPath()
+          ctx.arc(x, y, ledRadius - 0.5, 0, Math.PI * 2)
+          ctx.fillStyle = 'rgba(60, 50, 40, 0.6)'
+          ctx.fill()
+          // Subtle ring
+          ctx.beginPath()
+          ctx.arc(x, y, ledRadius - 0.5, 0, Math.PI * 2)
+          ctx.strokeStyle = 'rgba(80, 70, 55, 0.4)'
+          ctx.lineWidth = 0.5
+          ctx.stroke()
+        }
+      }
+
+      // --- Flat/Sharp labels at arc edges ---
+      ctx.font = '9px "Helvetica Neue", sans-serif'
+      ctx.textBaseline = 'middle'
+      ctx.fillStyle = 'rgba(220, 210, 190, 0.3)'
+      const leftAngle = ARC_START
+      const rightAngle = ARC_END
+      const labelOffset = arcRadius + 10
+      ctx.textAlign = 'center'
+      ctx.fillText('\u266D', arcCenterX + Math.cos(leftAngle) * labelOffset, arcCenterY - Math.sin(leftAngle) * labelOffset)
+      ctx.fillText('\u266F', arcCenterX + Math.cos(rightAngle) * labelOffset, arcCenterY - Math.sin(rightAngle) * labelOffset)
 
       // --- Target string indicator (non-chromatic tunings) ---
       const closestString = detecting && tuner.noteInfo && hasStrings
@@ -63,9 +136,8 @@ export default function TunerDisplay({ tuner, tuning, onCycleTuning, onClose, wi
       ctx.textAlign = 'center'
       ctx.textBaseline = 'middle'
 
-      // Note name — large
-      const noteY = hasStrings ? height * 0.24 : height * 0.28
-      ctx.font = 'bold 28px "Courier New", monospace'
+      const noteY = height * 0.7
+      ctx.font = 'bold 22px "Courier New", monospace'
       ctx.fillStyle = detecting
         ? (isInTune ? '#48bb78' : 'rgba(220, 210, 190, 0.9)')
         : 'rgba(220, 210, 190, 0.3)'
@@ -73,115 +145,48 @@ export default function TunerDisplay({ tuner, tuning, onCycleTuning, onClose, wi
 
       // Octave — smaller, offset right
       if (octave) {
-        ctx.font = 'bold 28px "Courier New", monospace'
+        ctx.font = 'bold 22px "Courier New", monospace'
         const actualNoteWidth = ctx.measureText(noteName).width
-        ctx.font = 'bold 14px "Courier New", monospace'
+        ctx.font = 'bold 11px "Courier New", monospace'
         ctx.fillStyle = 'rgba(220, 210, 190, 0.5)'
         ctx.textAlign = 'left'
-        ctx.fillText(octave, centerX - 4 + actualNoteWidth / 2 + 2, noteY + 6)
+        ctx.fillText(octave, centerX - 4 + actualNoteWidth / 2 + 2, noteY + 4)
         ctx.textAlign = 'center'
       }
 
-      // --- Target string label (e.g. "→ E2" or "str 6") ---
+      // --- Target string label ---
       if (closestString && detecting) {
-        const stringNum = tuning.strings.length - closestString.stringIndex // 6=low E, 1=high E
-        ctx.font = '9px "Courier New", monospace'
+        const stringNum = tuning.strings.length - closestString.stringIndex
+        ctx.font = '8px "Courier New", monospace'
         ctx.fillStyle = isInTune ? 'rgba(72, 187, 120, 0.7)' : 'rgba(220, 210, 190, 0.4)'
-        ctx.fillText(`str ${stringNum} · ${closestString.stringNote}`, centerX, noteY + 18)
+        ctx.fillText(`str ${stringNum} · ${closestString.stringNote}`, centerX, noteY + 14)
       }
 
       // --- In-tune glow ---
       if (isInTune && detecting) {
-        const tuneGlow = ctx.createRadialGradient(centerX, noteY, 2, centerX, noteY, 30)
-        tuneGlow.addColorStop(0, 'rgba(72, 187, 120, 0.15)')
+        const tuneGlow = ctx.createRadialGradient(centerX, noteY - 10, 2, centerX, noteY - 10, 35)
+        tuneGlow.addColorStop(0, 'rgba(72, 187, 120, 0.12)')
         tuneGlow.addColorStop(1, 'rgba(72, 187, 120, 0)')
         ctx.fillStyle = tuneGlow
         ctx.fillRect(0, 0, width, height)
       }
 
-      // --- Cents Meter Bar ---
-      const meterY = hasStrings ? height * 0.6 : height * 0.55
-      const meterWidth = width - 24
-      const meterLeft = 12
-      const meterHeight = 6
-
-      // Track background
-      ctx.fillStyle = 'rgba(0, 0, 0, 0.3)'
-      ctx.beginPath()
-      ctx.roundRect(meterLeft, meterY - meterHeight / 2, meterWidth, meterHeight, 3)
-      ctx.fill()
-
-      // Center tick mark
-      ctx.fillStyle = 'rgba(220, 210, 190, 0.4)'
-      ctx.fillRect(centerX - 0.5, meterY - meterHeight / 2 - 2, 1, meterHeight + 4)
-
-      // Quarter tick marks
-      for (const frac of [0.25, 0.75]) {
-        const x = meterLeft + frac * meterWidth
-        ctx.fillStyle = 'rgba(220, 210, 190, 0.15)'
-        ctx.fillRect(x - 0.5, meterY - meterHeight / 2 - 1, 1, meterHeight + 2)
-      }
-
-      // Indicator dot
-      if (detecting) {
-        const centsNorm = displayCentsRef.current / 50
-        const clampedNorm = Math.max(-1, Math.min(1, centsNorm))
-        const indicatorX = centerX + clampedNorm * (meterWidth / 2 - 4)
-
-        const absCents = Math.abs(displayCentsRef.current)
-        let dotColor: string
-        if (absCents <= 5) {
-          dotColor = '#48bb78'
-        } else if (absCents <= 20) {
-          dotColor = '#f5a623'
-        } else {
-          dotColor = '#e53e3e'
-        }
-
-        // Dot glow
-        const dotGlow = ctx.createRadialGradient(indicatorX, meterY, 0, indicatorX, meterY, 8)
-        dotGlow.addColorStop(0, dotColor + '4d')
-        dotGlow.addColorStop(1, 'rgba(0,0,0,0)')
-        ctx.fillStyle = dotGlow
-        ctx.fillRect(indicatorX - 8, meterY - 8, 16, 16)
-
-        // Dot
-        ctx.beginPath()
-        ctx.arc(indicatorX, meterY, 3, 0, Math.PI * 2)
-        ctx.fillStyle = dotColor
-        ctx.fill()
-      }
-
-      // --- Flat/Sharp labels ---
-      ctx.font = '8px "Helvetica Neue", sans-serif'
-      ctx.fillStyle = 'rgba(220, 210, 190, 0.3)'
-      ctx.textAlign = 'left'
-      ctx.fillText('\u266D', meterLeft, meterY + meterHeight / 2 + 10)
-      ctx.textAlign = 'right'
-      ctx.fillText('\u266F', meterLeft + meterWidth, meterY + meterHeight / 2 + 10)
-
-      // --- Frequency readout ---
+      // --- Frequency + cents readout ---
       ctx.textAlign = 'center'
-      ctx.font = '9px "Courier New", monospace'
+      ctx.font = '8px "Courier New", monospace'
       ctx.fillStyle = detecting
-        ? 'rgba(220, 210, 190, 0.5)'
-        : 'rgba(220, 210, 190, 0.15)'
+        ? 'rgba(220, 210, 190, 0.45)'
+        : 'rgba(220, 210, 190, 0.12)'
 
       const freqText = detecting && tuner.rawFrequency
         ? `${tuner.rawFrequency.toFixed(1)} Hz`
         : '--- Hz'
-      ctx.fillText(freqText, centerX, height * 0.82)
-
-      // --- Cents readout ---
-      ctx.font = '8px "Courier New", monospace'
-      ctx.fillStyle = detecting
-        ? 'rgba(220, 210, 190, 0.4)'
-        : 'rgba(220, 210, 190, 0.1)'
 
       const centsText = detecting && tuner.noteInfo
-        ? `${tuner.smoothedCents > 0 ? '+' : ''}${tuner.smoothedCents}\u00A2`
+        ? `  ${tuner.smoothedCents > 0 ? '+' : ''}${tuner.smoothedCents}\u00A2`
         : ''
-      ctx.fillText(centsText, centerX, height * 0.93)
+
+      ctx.fillText(freqText + centsText, centerX, height * 0.93)
 
       rafRef.current = requestAnimationFrame(draw)
     }
@@ -199,26 +204,16 @@ export default function TunerDisplay({ tuner, tuning, onCycleTuning, onClose, wi
           className="rounded"
         />
       </div>
-      <div className="flex items-center gap-1.5">
-        <button
-          onClick={onCycleTuning}
-          className="text-[9px] font-label uppercase tracking-wider text-engraved font-bold hover:text-hw-600 transition-colors cursor-pointer no-select"
-          title={`Tuning: ${tuning.name} — click to change`}
-        >
-          Tuner · {tuning.shortName}
-        </button>
-        {onClose && (
-          <button
-            onClick={onClose}
-            className="text-engraved hover:text-hw-600 transition-colors cursor-pointer no-select"
-            title="Hide tuner"
-          >
-            <svg width="8" height="8" viewBox="0 0 8 8" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round">
-              <path d="M1 1l6 6M7 1l-6 6" />
-            </svg>
-          </button>
-        )}
-      </div>
+      <button
+        onClick={onTuningClick}
+        className="text-[9px] font-label uppercase tracking-wider text-engraved font-bold hover:text-hw-600 transition-colors cursor-pointer no-select flex items-center gap-0.5"
+        title={`Tuning: ${tuning.name} — click to change`}
+      >
+        {tuning.shortName}
+        <svg width="6" height="4" viewBox="0 0 6 4" fill="currentColor" className="opacity-50">
+          <path d="M0 0l3 4 3-4z" />
+        </svg>
+      </button>
     </div>
   )
 }

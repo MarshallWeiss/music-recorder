@@ -57,6 +57,7 @@ export default {
         'led-red': '0 0 6px 2px rgba(239,68,68,0.7)',
         'led-green': '0 0 6px 2px rgba(34,197,94,0.7)',
         'led-amber': '0 0 6px 2px rgba(245,166,35,0.7)',
+        'led-blue': '0 0 6px 2px rgba(96,165,250,0.7)',
       },
       keyframes: {
         'reel-spin': {

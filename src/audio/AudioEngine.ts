@@ -458,17 +458,26 @@ export class AudioEngine {
       if (!this.context || !this.metronomeEnabled) return
       const secondsPerBeat = 60 / this.metronomeBpm
 
+      // Track the most recent beat scheduled in this interval check.
+      // When the interval fires late and the while loop catches up multiple beats,
+      // we only report the latest beat to the UI — otherwise React batches the
+      // rapid-fire setState calls and the indicator appears to skip beats.
+      let lastBeat = -1
+      let lastDownbeat = false
+
       while (this.metronomeNextBeatTime < this.context.currentTime + scheduleAhead) {
         this.scheduleClick(this.metronomeNextBeatTime, this.metronomeBeatIndex % this.metronomeBeatsPerBar === 0)
 
-        // Fire beat callback
-        if (this.onBeat) {
-          const beat = this.metronomeBeatIndex % this.metronomeBeatsPerBar
-          this.onBeat(beat, beat === 0)
-        }
+        const beat = this.metronomeBeatIndex % this.metronomeBeatsPerBar
+        lastBeat = beat
+        lastDownbeat = beat === 0
 
         this.metronomeBeatIndex++
         this.metronomeNextBeatTime += secondsPerBeat
+      }
+
+      if (lastBeat >= 0 && this.onBeat) {
+        this.onBeat(lastBeat, lastDownbeat)
       }
     }, checkInterval)
   }

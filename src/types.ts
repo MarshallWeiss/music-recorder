@@ -21,10 +21,12 @@ export interface Session {
   tracks: SerializedTrack[]
 }
 
+export type SerializedChannelData = Float32Array | number[]
+
 export interface SerializedTrack {
   id: number
   name: string
-  audioData: number[][] | null // channel data as plain arrays (for IndexedDB storage)
+  audioData: SerializedChannelData[] | null // typed arrays; number[] remains supported for older sessions
   volume: number
   pan: number
   muted: boolean

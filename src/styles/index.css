@@ -10,6 +10,424 @@ body {
   background: #1a1612;
 }
 
+html,
+body,
+#root {
+  min-height: 100%;
+}
+
+body {
+  min-width: 320px;
+}
+
+button:focus-visible,
+input:focus-visible,
+[tabindex]:focus-visible {
+  outline: 2px solid rgba(50, 88, 116, 0.9);
+  outline-offset: 3px;
+}
+
+.recorder-shell {
+  min-height: 100vh;
+  min-height: 100dvh;
+  padding: clamp(0px, 1.2vw, 16px);
+}
+
+.recorder-chassis {
+  width: min(100%, 1560px);
+  min-width: 0;
+  min-height: calc(100vh - clamp(0px, 2.4vw, 32px));
+  min-height: calc(100dvh - clamp(0px, 2.4vw, 32px));
+  margin: auto;
+  border-radius: 12px;
+  box-shadow: 0 18px 60px rgba(0, 0, 0, 0.48), 0 2px 10px rgba(0, 0, 0, 0.44);
+}
+
+.recorder-main {
+  min-width: 0;
+}
+
+.recorder-metal-panel {
+  display: grid;
+  grid-template-columns: minmax(150px, 200px) minmax(340px, 1fr) minmax(96px, auto);
+  align-items: center;
+  gap: 24px;
+}
+
+.recorder-meter-bank {
+  min-width: 0;
+}
+
+.recorder-work-area {
+  width: 100%;
+  max-width: 1060px;
+  margin-inline: auto;
+}
+
+.recorder-transport-column {
+  min-width: min(100%, 460px);
+}
+
+.recorder-mixer-scroll {
+  max-width: 100%;
+  overflow-x: auto;
+  overscroll-behavior-inline: contain;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(82, 68, 48, 0.45) rgba(255, 255, 255, 0.08);
+}
+
+.recorder-mixer-bank {
+  width: max-content;
+  min-width: 416px;
+}
+
+.track-waveform {
+  box-shadow:
+    inset 0 2px 5px rgba(0, 0, 0, 0.72),
+    inset 0 -1px 0 rgba(255, 248, 224, 0.08),
+    0 1px 0 rgba(255, 248, 224, 0.12);
+  border: 1px solid rgba(47, 39, 28, 0.52);
+}
+
+.track-waveform canvas {
+  display: block;
+}
+
+.shortcut-legend {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 13px;
+  color: rgba(55, 45, 34, 0.48);
+  font: 600 8px/1 'Helvetica Neue', Helvetica, Arial, sans-serif;
+}
+
+.shortcut-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.shortcut-item kbd {
+  min-width: 20px;
+  padding: 3px 5px 2px;
+  border-radius: 3px;
+  color: rgba(52, 44, 34, 0.65);
+  text-align: center;
+  background: linear-gradient(180deg, rgba(226, 217, 198, 0.88), rgba(177, 166, 146, 0.9));
+  border: 1px solid rgba(80, 68, 51, 0.28);
+  box-shadow: 0 1px 0 rgba(255, 255, 255, 0.28), inset 0 -1px 1px rgba(34, 26, 17, 0.12);
+}
+
+.recorder-power-console {
+  width: min(360px, calc(100% - 32px));
+  min-height: 320px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 40px 28px;
+  border-radius: 10px;
+  background:
+    repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(255,255,255,0.025) 2px, rgba(255,255,255,0.025) 3px),
+    linear-gradient(180deg, rgba(198,190,176,0.74), rgba(174,164,146,0.82));
+  border: 1px solid rgba(61, 49, 34, 0.24);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.28), inset 0 -2px 6px rgba(59,43,24,0.18), 0 16px 38px rgba(51,35,18,0.2);
+}
+
+.recorder-brand-plate {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  margin-bottom: 34px;
+  color: rgba(44, 36, 28, 0.67);
+  text-shadow: 0 1px 0 rgba(255,255,255,0.28);
+}
+
+.recorder-brand-plate > span {
+  font: 800 18px/1 'Helvetica Neue', Helvetica, Arial, sans-serif;
+  letter-spacing: 0.13em;
+}
+
+.recorder-brand-plate small {
+  font: 500 9px/1.2 'Helvetica Neue', Helvetica, Arial, sans-serif;
+  letter-spacing: 0.08em;
+}
+
+.recorder-power-button {
+  cursor: pointer;
+}
+
+.recorder-power-button:disabled {
+  cursor: wait;
+}
+
+.recorder-power-button.is-starting svg {
+  animation: recorder-power-pulse 900ms ease-in-out infinite alternate;
+}
+
+.recorder-power-label {
+  margin-top: 18px;
+}
+
+.recorder-power-error {
+  width: 100%;
+  display: flex;
+  align-items: flex-start;
+  gap: 9px;
+  margin-top: 24px;
+  padding: 10px 12px;
+  border-radius: 4px;
+  color: rgba(67, 44, 31, 0.84);
+  background: rgba(118, 64, 44, 0.1);
+  border: 1px solid rgba(118, 64, 44, 0.2);
+  font: 600 10px/1.45 'Helvetica Neue', Helvetica, Arial, sans-serif;
+}
+
+.recorder-error-dot {
+  width: 7px;
+  height: 7px;
+  flex: 0 0 auto;
+  margin-top: 3px;
+  border-radius: 50%;
+  background: #9c312d;
+  box-shadow: 0 0 7px rgba(156, 49, 45, 0.55);
+}
+
+.recorder-input-error {
+  margin-top: 4px;
+  color: #7a2926;
+  font: 700 8px/1.2 'Helvetica Neue', Helvetica, Arial, sans-serif;
+  letter-spacing: 0.04em;
+}
+
+@keyframes recorder-power-pulse {
+  from { opacity: 0.36; }
+  to { opacity: 1; }
+}
+
+@media (max-width: 1120px) {
+  .recorder-metal-panel {
+    grid-template-columns: minmax(150px, 1fr) auto;
+    gap: 14px 22px;
+  }
+
+  .recorder-meter-bank {
+    grid-column: 1 / -1;
+    grid-row: 1;
+  }
+
+  .recorder-input-cluster {
+    grid-column: 1;
+    grid-row: 2;
+    justify-self: start;
+  }
+
+  .recorder-control-cluster {
+    grid-column: 2;
+    grid-row: 2;
+  }
+
+  .recorder-work-area:not(.recorder-work-area--looper) {
+    flex-direction: column;
+    align-items: center;
+  }
+
+  .recorder-mixer-scroll {
+    width: min(100%, 460px);
+  }
+}
+
+@media (max-width: 760px) {
+  .recorder-shell {
+    padding: 0;
+  }
+
+  .recorder-chassis {
+    min-height: 100vh;
+    min-height: 100dvh;
+    border-radius: 0;
+  }
+
+  .recorder-metal-panel {
+    padding: 16px 14px !important;
+  }
+
+  .recorder-work-area {
+    padding: 14px 12px 18px !important;
+    gap: 18px !important;
+  }
+
+  .shortcut-legend {
+    display: none;
+  }
+}
+
+@media (max-width: 900px) {
+  .recorder-wood-panel {
+    width: 28px !important;
+  }
+
+  .recorder-metal-panel {
+    grid-template-columns: 120px minmax(260px, 1fr) 68px;
+    gap: 12px;
+  }
+
+  .recorder-meter-bank {
+    grid-column: 2;
+    grid-row: 1;
+  }
+
+  .recorder-input-cluster {
+    width: 120px !important;
+    grid-column: 1;
+    grid-row: 1;
+  }
+
+  .recorder-control-cluster {
+    grid-column: 3;
+    grid-row: 1;
+  }
+
+  .recorder-control-cluster.is-expanded {
+    grid-column: 1 / -1;
+    grid-row: 2;
+    justify-self: center;
+  }
+
+  .recorder-vu-meter canvas {
+    width: clamp(116px, 18vw, 150px) !important;
+    height: auto !important;
+  }
+
+  .recorder-cassette-deck {
+    transform: scale(0.88);
+    transform-origin: top center;
+    margin-bottom: -36px;
+  }
+
+  .looper-stomp-button {
+    width: 88px !important;
+    height: 88px !important;
+  }
+}
+
+@media (max-width: 560px) {
+  .recorder-wood-panel {
+    display: none;
+  }
+
+  .recorder-metal-panel {
+    grid-template-columns: 1fr auto;
+  }
+
+  .recorder-meter-bank {
+    grid-column: 1 / -1;
+    grid-row: 1;
+  }
+
+  .recorder-input-cluster {
+    grid-column: 1;
+    grid-row: 2;
+    justify-self: start;
+  }
+
+  .recorder-control-cluster {
+    grid-column: 2;
+    grid-row: 2;
+  }
+
+  .recorder-control-cluster.is-expanded {
+    grid-column: 1 / -1;
+    grid-row: 3;
+    justify-self: center;
+    max-width: 100%;
+  }
+
+  .recorder-vu-meter canvas {
+    width: 145px !important;
+    height: auto !important;
+  }
+
+  .recorder-input-cluster {
+    width: 150px !important;
+  }
+
+  .recorder-control-cluster {
+    gap: 10px !important;
+  }
+
+  .recorder-cassette-well {
+    overflow: hidden;
+  }
+
+  .recorder-cassette-deck {
+    transform: none;
+    margin-bottom: 0;
+  }
+}
+
+@media (max-width: 480px) {
+  .recorder-cassette-shell {
+    transform: scale(0.84);
+    transform-origin: top left;
+  }
+
+  .recorder-cassette-well {
+    width: 386px !important;
+    height: 260px;
+  }
+
+  .recorder-cassette-deck {
+    max-width: 386px !important;
+  }
+
+  .recorder-meter-bank {
+    gap: 7px !important;
+  }
+
+  .recorder-vu-meter canvas {
+    width: 128px !important;
+  }
+}
+
+@media (max-width: 400px) {
+  .recorder-cassette-shell {
+    transform: scale(0.72);
+  }
+
+  .recorder-cassette-well {
+    width: 336px !important;
+    height: 226px;
+  }
+
+  .recorder-cassette-deck {
+    max-width: 336px !important;
+  }
+
+  .recorder-vu-meter canvas {
+    width: 116px !important;
+  }
+}
+
+@media (hover: none), (pointer: coarse) {
+  .shortcut-legend {
+    display: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    scroll-behavior: auto !important;
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
 /* Walnut wood grain — layered gradients at varying angles for natural look */
 .texture-wood {
   background:

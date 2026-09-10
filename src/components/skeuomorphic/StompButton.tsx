@@ -42,9 +42,18 @@ export default function StompButton({ looper, onClick }: StompButtonProps) {
 
       {/* Stomp button */}
       <button
-        onClick={onClick}
-        tabIndex={-1}
-        className="relative rounded-full cursor-pointer transition-transform active:translate-y-0.5 active:scale-[0.98] no-select"
+        onClick={(event) => {
+          if (event.detail !== 0) onClick()
+        }}
+        onKeyDown={(event) => {
+          if (event.key === 'Enter') {
+            event.preventDefault()
+            onClick()
+          }
+        }}
+        className="looper-stomp-button relative rounded-full cursor-pointer transition-transform active:translate-y-0.5 active:scale-[0.98] no-select"
+        aria-label={`Looper: ${STATE_LABELS[looper.state]}`}
+        title="Looper footswitch"
         style={{
           width: 100,
           height: 100,

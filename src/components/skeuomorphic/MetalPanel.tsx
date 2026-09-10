@@ -28,6 +28,8 @@ interface MetalPanelProps {
   devices: AudioDevice[]
   selectedDeviceId: string | null
   onSelectDevice: (deviceId: string) => void
+  inputError: string | null
+  onRetryInput: () => void
 }
 
 export default function MetalPanel({
@@ -48,6 +50,8 @@ export default function MetalPanel({
   devices,
   selectedDeviceId,
   onSelectDevice,
+  inputError,
+  onRetryInput,
 }: MetalPanelProps) {
   const [tunerVisible, setTunerVisible] = useState(false)
   const tuner = useTuner(engine, tunerVisible)
@@ -158,12 +162,12 @@ export default function MetalPanel({
   const knobToGain = (v: number) => v * 10
 
   return (
-    <div className="texture-metal px-6 py-5 flex items-center gap-6" style={{
+    <div className="texture-metal recorder-metal-panel px-6 py-5" style={{
       borderBottom: '1px solid rgba(20,15,5,0.15)',
       boxShadow: '0 2px 8px rgba(20,15,5,0.15), inset 0 1px 0 rgba(255,250,240,0.12)',
     }}>
       {/* Input gain with device selector (left) - fixed width to match right controls */}
-      <div className="flex flex-col items-center gap-0.5 relative w-[200px] shrink-0" ref={dropdownRef}>
+      <div className="recorder-input-cluster flex flex-col items-center gap-0.5 relative w-[200px] shrink-0" ref={dropdownRef}>
         <RotaryKnob
           value={gainToKnob(inputGain)}
           onChange={(v) => setInputGain(knobToGain(v))}
@@ -177,6 +181,17 @@ export default function MetalPanel({
         >
           {deviceLabel}
         </button>
+
+        {inputError && (
+          <button
+            type="button"
+            onClick={onRetryInput}
+            className="recorder-input-error"
+            title={inputError}
+          >
+            Input offline · retry
+          </button>
+        )}
 
         {/* Device dropdown */}
         {deviceDropdownOpen && devices.length > 1 && (
@@ -207,13 +222,13 @@ export default function MetalPanel({
       </div>
 
       {/* VU Meters (center) */}
-      <div className="flex items-center gap-3 flex-1 justify-center">
-        <VUMeter analyser={getLeftAnalyser()} label="L" width={190} height={120} />
-        <VUMeter analyser={getRightAnalyser()} label="R" width={190} height={120} />
+      <div className="recorder-meter-bank flex items-center gap-3 justify-center">
+        <div className="recorder-vu-meter"><VUMeter analyser={getLeftAnalyser()} label="L" width={190} height={120} /></div>
+        <div className="recorder-vu-meter"><VUMeter analyser={getRightAnalyser()} label="R" width={190} height={120} /></div>
       </div>
 
       {/* Right side controls */}
-      <div className="flex items-center gap-4 shrink-0 justify-end">
+      <div className={`recorder-control-cluster flex items-center gap-4 shrink-0 justify-end ${(tunerVisible || metronomeOn) ? 'is-expanded' : ''}`}>
         {/* Tuner expanded panel */}
         {tunerVisible && (
           <div className="relative" ref={tuningDropdownRef}>

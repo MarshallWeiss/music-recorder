@@ -29,6 +29,8 @@ export interface UseAudioEngineReturn {
   isCountingIn: boolean
   currentBeat: number
   isInitialized: boolean
+  isInitializing: boolean
+  initializationError: string | null
 
   // Session state
   currentSessionId: string | null
@@ -92,6 +94,8 @@ export function useAudioEngine(): UseAudioEngineReturn {
   const [isCountingIn, setIsCountingIn] = useState(false)
   const [currentBeat, setCurrentBeat] = useState(-1)
   const [isInitialized, setIsInitialized] = useState(false)
+  const [isInitializing, setIsInitializing] = useState(false)
+  const [initializationError, setInitializationError] = useState<string | null>(null)
 
   // Session state
   const [currentSessionId, setCurrentSessionId] = useState<string | null>(null)
@@ -117,27 +121,105 @@ export function useAudioEngine(): UseAudioEngineReturn {
   const initialize = useCallback(async () => {
     const engine = engineRef.current
     if (!engine) return
-    await engine.init()
-    const deviceList = await engine.enumerateDevices()
-    setDevices(deviceList)
+    setIsInitializing(true)
+    setInitializationError(null)
 
-    // Auto-select TASCAM if found, otherwise first device
-    const tascam = deviceList.find(d => d.label.toLowerCase().includes('us-1x2'))
-    const defaultDevice = tascam || deviceList[0]
-    if (defaultDevice) {
+    try {
+      if (import.meta.env.DEV && new URLSearchParams(window.location.search).has('demo')) {
+        const context = await engine.init()
+        const previewDuration = 8
+        const previewBuffer = context.createBuffer(1, context.sampleRate * previewDuration, context.sampleRate)
+        const channel = previewBuffer.getChannelData(0)
+        for (let i = 0; i < channel.length; i += 1) {
+          const pulse = 0.18 + 0.82 * Math.pow(Math.sin((i / context.sampleRate) * Math.PI * 2), 8)
+          channel[i] = Math.sin((i / context.sampleRate) * Math.PI * 220) * pulse * 0.55
+        }
+        setDevices([{ deviceId: 'preview', label: 'Preview input' }])
+        setSelectedDeviceId('preview')
+        setTracks(prev => prev.map(track => track.id === 0 ? { ...track, audioBuffer: previewBuffer } : track))
+        setLoopDuration(previewDuration)
+        setIsInitialized(true)
+        return
+      }
+
+      if (!navigator.mediaDevices?.getUserMedia) {
+        throw new Error('This browser cannot access audio inputs. Use a current version of Chrome, Edge, Firefox, or Safari.')
+      }
+
+      await engine.init()
+      const deviceList = await engine.enumerateDevices()
+      setDevices(deviceList)
+
+      if (deviceList.length === 0) {
+        throw new Error('No microphone or audio interface was found. Connect one, then try again.')
+      }
+
+      // Auto-select TASCAM if found, otherwise first device
+      const tascam = deviceList.find(d => d.label.toLowerCase().includes('us-1x2'))
+      const defaultDevice = tascam || deviceList[0]
       await engine.selectDevice(defaultDevice.deviceId)
+      engine.setInputGain(inputGain)
       setSelectedDeviceId(defaultDevice.deviceId)
+      setIsInitialized(true)
+    } catch (error) {
+      const name = error instanceof DOMException ? error.name : ''
+      const message = error instanceof Error ? error.message : ''
+
+      if (name === 'NotAllowedError' || name === 'SecurityError') {
+        setInitializationError('Microphone access is blocked. Allow it in your browser settings, then try again.')
+      } else if (name === 'NotFoundError' || name === 'DevicesNotFoundError') {
+        setInitializationError('No microphone or audio interface was found. Connect one, then try again.')
+      } else if (name === 'NotReadableError' || name === 'TrackStartError') {
+        setInitializationError('Your audio input is busy in another app. Close it there, then try again.')
+      } else {
+        setInitializationError(message || 'The audio input could not be started. Check your connection and try again.')
+      }
+      setSelectedDeviceId(null)
+      setIsInitialized(false)
+    } finally {
+      setIsInitializing(false)
     }
-    setIsInitialized(true)
-  }, [])
+  }, [inputGain])
 
   const selectDevice = useCallback(async (deviceId: string) => {
     const engine = engineRef.current
     if (!engine) return
-    await engine.selectDevice(deviceId)
-    engine.setInputGain(inputGain)
-    setSelectedDeviceId(deviceId)
+    setInitializationError(null)
+    try {
+      await engine.selectDevice(deviceId)
+      engine.setInputGain(inputGain)
+      setSelectedDeviceId(deviceId)
+    } catch {
+      setInitializationError('That audio input could not be opened. Check its connection or choose another input.')
+    }
   }, [inputGain])
+
+  useEffect(() => {
+    if (!isInitialized || !navigator.mediaDevices?.addEventListener) return
+
+    const handleDeviceChange = async () => {
+      try {
+        const mediaDevices = await navigator.mediaDevices.enumerateDevices()
+        const nextDevices = mediaDevices
+          .filter(device => device.kind === 'audioinput')
+          .map(device => ({
+            deviceId: device.deviceId,
+            label: device.label || `Microphone ${device.deviceId.slice(0, 6)}`,
+          }))
+
+        setDevices(nextDevices)
+        if (selectedDeviceId && !nextDevices.some(device => device.deviceId === selectedDeviceId)) {
+          setSelectedDeviceId(null)
+          setInitializationError('The selected audio input was disconnected. Reconnect it or choose another input.')
+        }
+      } catch {
+        setInitializationError('Audio inputs could not be refreshed. Check browser access and try again.')
+      }
+    }
+
+    navigator.mediaDevices.addEventListener('devicechange', handleDeviceChange)
+    return () => navigator.mediaDevices.removeEventListener('devicechange', handleDeviceChange)
+  }, [isInitialized, selectedDeviceId])
 
   const armTrack = useCallback((trackId: number) => {
     setTracks(prev => prev.map(t => ({
@@ -181,11 +263,18 @@ export function useAudioEngine(): UseAudioEngineReturn {
     setIsPlaying(false)
     setIsCountingIn(false)
 
-    engine.startRecording(
-      monitorBuffers,
-      hasLoop ? loopDurationRef.current : undefined,
-      0, // Always start from position 0
-    )
+    try {
+      engine.startRecording(
+        monitorBuffers,
+        hasLoop ? loopDurationRef.current : undefined,
+        0, // Always start from position 0
+      )
+    } catch {
+      setTracks(prev => prev.map(t => ({ ...t, isRecording: false })))
+      setIsRecording(false)
+      setInitializationError('The selected audio input is unavailable. Reconnect it or choose another input.')
+      return
+    }
 
     // Poll for auto-stop (engine sets isCurrentlyRecording = false at loop boundary)
     const interval = setInterval(() => {
@@ -569,6 +658,8 @@ export function useAudioEngine(): UseAudioEngineReturn {
   // Auto-save after recording completes (debounced to avoid rapid saves)
   const autoSaveTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   useEffect(() => {
+    if (import.meta.env.DEV && new URLSearchParams(window.location.search).has('demo')) return
+
     // Only auto-save if there's recorded audio and we have a session
     const hasAudio = tracks.some(t => t.audioBuffer)
     if (!hasAudio || isRecording) return
@@ -599,6 +690,8 @@ export function useAudioEngine(): UseAudioEngineReturn {
     isCountingIn,
     currentBeat,
     isInitialized,
+    isInitializing,
+    initializationError,
     initialize,
     selectDevice,
     armTrack,

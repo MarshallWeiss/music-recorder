@@ -87,17 +87,17 @@ export default function CassetteDeck({
   const labelH = H - labelTop - 32
 
   return (
-    <div className="flex flex-col items-center w-full" style={{ maxWidth: W + 40 }}>
+    <div className="recorder-cassette-deck flex flex-col items-center w-full" style={{ maxWidth: W + 40 }}>
       {/* Cassette well — recessed area in the deck */}
       <div
-        className="shadow-cassette-well rounded-lg p-4 w-full"
+        className="recorder-cassette-well shadow-cassette-well rounded-lg p-4 w-full"
         style={{
           background: 'linear-gradient(180deg, #222018 0%, #1a1610 40%, #141210 100%)',
         }}
       >
         {/* Cassette shell */}
         <div
-          className="relative rounded-lg overflow-hidden"
+          className="recorder-cassette-shell relative rounded-lg overflow-hidden"
           style={{
             width: W,
             height: H,

@@ -5,7 +5,7 @@ interface WoodPanelProps {
 export default function WoodPanel({ side }: WoodPanelProps) {
   return (
     <div
-      className={`texture-wood flex-shrink-0 ${
+      className={`texture-wood recorder-wood-panel flex-shrink-0 ${
         side === 'left' ? 'rounded-l-xl' : 'rounded-r-xl'
       }`}
       style={{

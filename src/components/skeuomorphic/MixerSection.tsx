@@ -3,6 +3,8 @@ import ChannelStrip from './ChannelStrip'
 
 interface MixerSectionProps {
   tracks: Track[]
+  currentTime: number
+  loopDuration: number
   onArmTrack: (trackId: number) => void
   onSetVolume: (trackId: number, volume: number) => void
   onSetPan: (trackId: number, pan: number) => void
@@ -14,6 +16,8 @@ interface MixerSectionProps {
 
 export default function MixerSection({
   tracks,
+  currentTime,
+  loopDuration,
   onArmTrack,
   onSetVolume,
   onSetPan,
@@ -23,9 +27,9 @@ export default function MixerSection({
   onRenameTrack,
 }: MixerSectionProps) {
   return (
-    <div className="flex flex-col flex-shrink-0">
+    <div className="recorder-mixer-scroll flex flex-col flex-shrink-0">
       {/* Channel strips container */}
-      <div className="flex flex-1 rounded"
+      <div className="recorder-mixer-bank flex flex-1 rounded"
         style={{
           background: 'linear-gradient(180deg, #dcd0b8 0%, #d0c4ac 30%, #c8bca4 70%, #c0b49c 100%)',
           boxShadow: `
@@ -41,6 +45,8 @@ export default function MixerSection({
           <div key={track.id} className={`${i > 0 ? 'border-l border-hw-400/20' : ''}`}>
             <ChannelStrip
               track={track}
+              currentTime={currentTime}
+              loopDuration={loopDuration}
               onArmTrack={() => onArmTrack(track.id)}
               onSetVolume={(v) => onSetVolume(track.id, v)}
               onSetPan={(p) => onSetPan(track.id, p)}

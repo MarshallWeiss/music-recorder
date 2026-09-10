@@ -1,6 +1,7 @@
 import { useState, useCallback } from 'react'
 import { useAudioEngine } from './hooks/useAudioEngine'
 import { useLooper } from './hooks/useLooper'
+import { useRecorderShortcuts } from './hooks/useRecorderShortcuts'
 import WoodPanel from './components/skeuomorphic/WoodPanel'
 import MetalPanel from './components/skeuomorphic/MetalPanel'
 import MixerSection from './components/skeuomorphic/MixerSection'
@@ -8,6 +9,11 @@ import CassetteDeck from './components/skeuomorphic/CassetteDeck'
 import TransportButtons from './components/skeuomorphic/TransportButtons'
 import LooperView from './components/skeuomorphic/LooperView'
 import SessionDrawer from './components/skeuomorphic/SessionDrawer'
+import ShortcutLegend from './components/skeuomorphic/ShortcutLegend'
+
+function StatusDot() {
+  return <span className="recorder-error-dot" aria-hidden="true" />
+}
 
 export default function App() {
   const {
@@ -26,6 +32,8 @@ export default function App() {
     isCountingIn,
     currentBeat,
     isInitialized,
+    isInitializing,
+    initializationError,
     initialize,
     selectDevice,
     armTrack,
@@ -74,38 +82,67 @@ export default function App() {
     }, 50)
   }, [])
 
-  const toggleMode = useCallback(() => {
+  const switchMode = useCallback((nextMode: 'multitrack' | 'looper') => {
+    if (nextMode === mode) return
     if (isRecording) stopRecording()
     if (isPlaying) stop()
-    setMode(prev => prev === 'multitrack' ? 'looper' : 'multitrack')
-  }, [isRecording, isPlaying, stopRecording, stop])
+    setMode(nextMode)
+  }, [mode, isRecording, isPlaying, stopRecording, stop])
 
   const armedTrack = tracks.find(t => t.isArmed)
   const hasRecordedTracks = tracks.some(t => t.audioBuffer)
 
+  useRecorderShortcuts({
+    enabled: isInitialized && !isLooperMode,
+    isPlaying,
+    isRecording,
+    isCountingIn,
+    hasRecordedTracks,
+    onPlay: play,
+    onStop: stop,
+    onStartRecording: startRecording,
+    onStopRecording: stopRecording,
+    onArmTrack: armTrack,
+  })
+
   // Initialization screen
   if (!isInitialized) {
     return (
-      <div className="h-screen flex" style={{ background: '#1a1612' }}>
-        <div className="flex flex-1 overflow-hidden">
+      <div className="recorder-shell flex" style={{ background: '#1a1612' }}>
+        <div className="recorder-chassis flex flex-1 overflow-hidden">
           <WoodPanel side="left" />
-          <div className="texture-body flex-1 flex items-center justify-center relative">
-            <button
-              onClick={initialize}
-              className="w-16 h-16 rounded-full shadow-knob cursor-pointer transition-all hover:brightness-110 active:shadow-button-down active:translate-y-px flex items-center justify-center"
-              style={{
-                background: 'radial-gradient(circle at 38% 35%, #c0b8a8, #807870 60%, #686058 100%)',
-              }}
-              title="Power on"
-            >
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="rgba(0,0,0,0.4)" strokeWidth="2.5" strokeLinecap="round">
-                <path d="M12 2v6" />
-                <path d="M18.4 6.6a9 9 0 1 1-12.8 0" />
-              </svg>
-            </button>
-            <span className="absolute mt-28 text-[10px] font-label uppercase tracking-[0.2em] text-engraved font-bold">
-              Power
-            </span>
+          <div className="texture-body recorder-power flex-1 flex items-center justify-center relative">
+            <div className="recorder-power-console">
+              <div className="recorder-brand-plate">
+                <span>PORTA FOUR</span>
+                <small>Browser multitrack recorder</small>
+              </div>
+
+              <button
+                onClick={initialize}
+                disabled={isInitializing}
+                className={`recorder-power-button w-16 h-16 rounded-full shadow-knob transition-all flex items-center justify-center ${isInitializing ? 'is-starting' : ''}`}
+                style={{
+                  background: 'radial-gradient(circle at 38% 35%, #c0b8a8, #807870 60%, #686058 100%)',
+                }}
+                title={initializationError ? 'Try audio input again' : 'Power on'}
+              >
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="rgba(0,0,0,0.4)" strokeWidth="2.5" strokeLinecap="round">
+                  <path d="M12 2v6" />
+                  <path d="M18.4 6.6a9 9 0 1 1-12.8 0" />
+                </svg>
+              </button>
+              <span className="recorder-power-label text-[10px] font-label uppercase tracking-[0.2em] text-engraved font-bold">
+                {isInitializing ? 'Starting' : initializationError ? 'Try again' : 'Power'}
+              </span>
+
+              {initializationError && (
+                <div className="recorder-power-error" role="alert">
+                  <StatusDot />
+                  <span>{initializationError}</span>
+                </div>
+              )}
+            </div>
           </div>
           <WoodPanel side="right" />
         </div>
@@ -114,13 +151,13 @@ export default function App() {
   }
 
   return (
-    <div className="h-screen flex" style={{ background: '#1a1612' }}>
-      <div className="flex flex-1 overflow-hidden">
+    <div className="recorder-shell flex" style={{ background: '#1a1612' }}>
+      <div className="recorder-chassis flex flex-1 overflow-hidden">
         {/* Left wood panel */}
         <WoodPanel side="left" />
 
         {/* Main device body */}
-        <div className="texture-body flex flex-col flex-1 overflow-y-auto">
+        <div className="texture-body recorder-main flex flex-col flex-1 overflow-y-auto">
           {/* Top: Brushed metal panel with VU meters + knobs */}
           <MetalPanel
             engine={engine}
@@ -140,6 +177,8 @@ export default function App() {
             devices={devices}
             selectedDeviceId={selectedDeviceId}
             onSelectDevice={selectDevice}
+            inputError={initializationError}
+            onRetryInput={initialize}
           />
 
           {/* Mode toggle — recessed toggle strip */}
@@ -151,8 +190,8 @@ export default function App() {
               background: 'linear-gradient(180deg, #c4bca8 0%, #bab2a0 100%)',
             }}>
               <button
-                onClick={(e) => { toggleMode(); (e.target as HTMLElement).blur() }}
-                tabIndex={-1}
+                onClick={() => switchMode('multitrack')}
+                aria-pressed={!isLooperMode}
                 className="px-4 py-1.5 text-[9px] font-label uppercase tracking-wider font-bold transition-all no-select"
                 style={{
                   background: !isLooperMode
@@ -167,8 +206,8 @@ export default function App() {
                 4-Track
               </button>
               <button
-                onClick={(e) => { toggleMode(); (e.target as HTMLElement).blur() }}
-                tabIndex={-1}
+                onClick={() => switchMode('looper')}
+                aria-pressed={isLooperMode}
                 className="px-4 py-1.5 text-[9px] font-label uppercase tracking-wider font-bold transition-all no-select"
                 style={{
                   background: isLooperMode
@@ -186,7 +225,7 @@ export default function App() {
           </div>
 
           {/* Middle: Cassette+Transport (left) | Mixer (right) OR Looper */}
-          <div className={`flex flex-1 px-6 py-4 gap-8 ${isLooperMode ? 'flex-col items-center justify-center' : 'items-start justify-center'}`}>
+          <div className={`recorder-work-area flex flex-1 px-6 py-4 gap-8 ${isLooperMode ? 'recorder-work-area--looper flex-col items-center justify-center' : 'items-start justify-center'}`}>
             {isLooperMode ? (
               <>
                 <CassetteDeck
@@ -205,7 +244,7 @@ export default function App() {
             ) : (
               <>
                 {/* Left column: Cassette deck + Transport */}
-                <div className="flex flex-col items-center gap-4">
+                <div className="recorder-transport-column flex flex-col items-center gap-4">
                   <CassetteDeck
                     isPlaying={isPlaying}
                     isRecording={isRecording}
@@ -227,11 +266,14 @@ export default function App() {
                     onStop={stop}
                     onSeekTo={seekTo}
                   />
+                  <ShortcutLegend />
                 </div>
 
                 {/* Right column: Mixer */}
                 <MixerSection
                   tracks={tracks}
+                  currentTime={currentTime}
+                  loopDuration={loopDuration}
                   onArmTrack={armTrack}
                   onSetVolume={setVolume}
                   onSetPan={setPan}

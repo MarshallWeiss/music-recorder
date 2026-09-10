@@ -3,9 +3,12 @@ import { Track } from '../../types'
 import RotaryKnob from './RotaryKnob'
 import VerticalFader from './VerticalFader'
 import StatusLED from './StatusLED'
+import TrackWaveform from './TrackWaveform'
 
 interface ChannelStripProps {
   track: Track
+  currentTime: number
+  loopDuration: number
   onArmTrack: () => void
   onSetVolume: (volume: number) => void
   onSetPan: (pan: number) => void
@@ -17,6 +20,8 @@ interface ChannelStripProps {
 
 export default function ChannelStrip({
   track,
+  currentTime,
+  loopDuration,
   onArmTrack,
   onSetVolume,
   onSetPan,
@@ -61,17 +66,21 @@ export default function ChannelStrip({
 
   return (
     <div
-      className={`relative flex flex-col items-center gap-3 py-4 px-3 no-select ${
+      className={`channel-strip relative flex flex-col items-center gap-3 py-4 px-3 no-select ${
         track.isRecording ? 'bg-red-900/10' : ''
       }`}
-      style={{ width: 90 }}
+      style={{ width: 104 }}
       onContextMenu={(e) => {
         e.preventDefault()
         setShowMenu(true)
       }}
     >
-      {/* Recorded indicator LED */}
-      <StatusLED active={!!track.audioBuffer} color="green" size="sm" />
+      <div className="flex items-center justify-between w-full px-1">
+        <span className="text-[8px] font-label font-bold tracking-[0.16em] text-engraved">
+          CH {track.id + 1}
+        </span>
+        <StatusLED active={!!track.audioBuffer} color="green" size="sm" />
+      </div>
 
       {/* Pan knob */}
       <RotaryKnob
@@ -96,10 +105,20 @@ export default function ChannelStrip({
             ? 'inset 0 2px 4px rgba(0,0,0,0.5), 0 0 8px rgba(220,40,40,0.3)'
             : '0 2px 5px rgba(20,15,5,0.4), inset 0 1px 0 rgba(255,250,240,0.2)',
         }}
-        title="Arm for recording"
+        title={`Arm ${track.name} for recording`}
+        aria-pressed={track.isArmed}
       >
         <StatusLED active={track.isArmed} color="red" pulse={track.isRecording} size="sm" />
       </button>
+
+      <TrackWaveform
+        buffer={track.audioBuffer}
+        currentTime={currentTime}
+        duration={loopDuration || track.audioBuffer?.duration || 0}
+        muted={track.muted}
+        armed={track.isArmed}
+        recording={track.isRecording}
+      />
 
       {/* Mute button */}
       <button
@@ -169,16 +188,24 @@ export default function ChannelStrip({
             className="w-12 text-[9px] bg-hw-700 text-hw-100 rounded px-1 py-0.5 text-center outline-none border border-hw-500"
           />
         ) : (
-          <span
-            className="text-[11px] font-label font-bold text-engraved cursor-default"
+          <button
+            type="button"
+            className="max-w-[78px] truncate text-[9px] font-label font-bold text-engraved cursor-text"
             onDoubleClick={() => {
               setEditName(track.name)
               setEditing(true)
             }}
+            onKeyDown={(event) => {
+              if (event.key === 'Enter' || event.key === ' ') {
+                event.preventDefault()
+                setEditName(track.name)
+                setEditing(true)
+              }
+            }}
             title="Double-click to rename"
           >
-            {track.id + 1}
-          </span>
+            {track.name}
+          </button>
         )}
 
         {/* Delete recording button */}

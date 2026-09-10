@@ -69,13 +69,8 @@ export class AudioEngine {
 
   async enumerateDevices(): Promise<AudioDevice[]> {
     // Need to request mic first to get labeled devices
-    try {
-      const tempStream = await navigator.mediaDevices.getUserMedia({ audio: true })
-      tempStream.getTracks().forEach(t => t.stop())
-    } catch {
-      // Permission denied — return empty
-      return []
-    }
+    const tempStream = await navigator.mediaDevices.getUserMedia({ audio: true })
+    tempStream.getTracks().forEach(t => t.stop())
 
     const devices = await navigator.mediaDevices.enumerateDevices()
     return devices
@@ -588,7 +583,7 @@ export class AudioEngine {
   /**
    * Create an AudioBuffer from serialized channel data.
    */
-  createBufferFromData(channelData: number[][], sampleRate: number): AudioBuffer {
+  createBufferFromData(channelData: Array<Float32Array | number[]>, sampleRate: number): AudioBuffer {
     const ctx = this.context ?? new AudioContext({ sampleRate })
     const buffer = ctx.createBuffer(
       channelData.length,
@@ -596,18 +591,19 @@ export class AudioEngine {
       sampleRate,
     )
     for (let ch = 0; ch < channelData.length; ch++) {
-      buffer.getChannelData(ch).set(new Float32Array(channelData[ch]))
+      buffer.getChannelData(ch).set(channelData[ch])
     }
     return buffer
   }
 
   /**
-   * Serialize an AudioBuffer to plain arrays for storage.
+   * Serialize an AudioBuffer to typed arrays for compact IndexedDB storage.
+   * IndexedDB structured-clones Float32Array, so no JSON conversion is needed.
    */
-  serializeBuffer(buffer: AudioBuffer): number[][] {
-    const data: number[][] = []
+  serializeBuffer(buffer: AudioBuffer): Float32Array[] {
+    const data: Float32Array[] = []
     for (let ch = 0; ch < buffer.numberOfChannels; ch++) {
-      data.push(Array.from(buffer.getChannelData(ch)))
+      data.push(new Float32Array(buffer.getChannelData(ch)))
     }
     return data
   }

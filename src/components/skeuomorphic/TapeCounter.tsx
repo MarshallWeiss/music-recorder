@@ -1,42 +1,52 @@
 interface TapeCounterProps {
   currentTime: number
   loopDuration: number
+  onSeekTo?: (time: number) => void
 }
 
-function CounterDigit({ digit }: { digit: string }) {
-  return (
-    <div
-      className="flex items-center justify-center rounded-sm"
-      style={{
-        width: 26,
-        height: 34,
-        background: '#0a0806',
-        boxShadow: 'inset 0 1px 3px rgba(0,0,0,0.8), 0 1px 0 rgba(255,255,255,0.05)',
-      }}
-    >
-      <span className="font-mono text-lg text-hw-100 font-bold leading-none">
-        {digit}
-      </span>
-    </div>
-  )
+function formatTime(time: number) {
+  const safeTime = Number.isFinite(time) ? Math.max(0, time) : 0
+  const minutes = Math.floor(safeTime / 60)
+  const seconds = Math.floor(safeTime % 60)
+  return `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`
 }
 
-export default function TapeCounter({ currentTime, loopDuration }: TapeCounterProps) {
-  // Display as M:SS format
-  const minutes = Math.floor(currentTime / 60)
-  const seconds = Math.floor(currentTime % 60)
-  const digits = `${minutes}${seconds.toString().padStart(2, '0')}`
+export default function TapeCounter({ currentTime, loopDuration, onSeekTo }: TapeCounterProps) {
+  const hasTape = loopDuration > 0
+  const clampedTime = hasTape ? Math.min(currentTime, loopDuration) : 0
+  const progress = hasTape ? (clampedTime / loopDuration) * 100 : 0
 
   return (
-    <div className="flex flex-col items-center gap-1.5">
-      <div className="flex gap-0.5 p-1.5 rounded shadow-inset-groove" style={{ background: '#1a1610' }}>
-        {digits.split('').map((d, i) => (
-          <CounterDigit key={i} digit={d} />
-        ))}
+    <div className="tape-position-panel" aria-label="Tape position">
+      <div className="tape-counter-readout" aria-live="off">
+        <span className="tape-counter-label">COUNTER</span>
+        <span className="tape-counter-time">{formatTime(clampedTime)}</span>
       </div>
-      <span className="text-[8px] font-label uppercase tracking-wider text-engraved font-bold">
-        Counter
-      </span>
+
+      <div className="tape-path-control">
+        <div className="tape-path-labels" aria-hidden="true">
+          <span>000</span>
+          <span>POSITION</span>
+          <span>{formatTime(loopDuration)}</span>
+        </div>
+        <div className="tape-path-rail">
+          <span className="tape-path-reel tape-path-reel--left" aria-hidden="true" />
+          <input
+            className="tape-position-range"
+            type="range"
+            min={0}
+            max={loopDuration || 1}
+            step={0.01}
+            value={clampedTime}
+            disabled={!hasTape || !onSeekTo}
+            onChange={(event) => onSeekTo?.(Number(event.target.value))}
+            aria-label="Tape position"
+            aria-valuetext={`${formatTime(clampedTime)} of ${formatTime(loopDuration)}`}
+            style={{ '--tape-progress': `${progress}%` } as React.CSSProperties}
+          />
+          <span className="tape-path-reel tape-path-reel--right" aria-hidden="true" />
+        </div>
+      </div>
     </div>
   )
 }

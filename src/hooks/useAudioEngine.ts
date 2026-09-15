@@ -12,6 +12,16 @@ export interface SessionMeta {
   updatedAt: number
 }
 
+export interface ClearedTrackInfo {
+  trackId: number
+  trackName: string
+}
+
+interface ClearedTrackSnapshot extends ClearedTrackInfo {
+  audioBuffer: AudioBuffer
+  loopDuration: number
+}
+
 export interface UseAudioEngineReturn {
   // State
   tracks: Track[]
@@ -31,6 +41,8 @@ export interface UseAudioEngineReturn {
   isInitialized: boolean
   isInitializing: boolean
   initializationError: string | null
+  recordingPreview: { min: number; max: number }[]
+  lastClearedTrack: ClearedTrackInfo | null
 
   // Session state
   currentSessionId: string | null
@@ -52,6 +64,8 @@ export interface UseAudioEngineReturn {
   toggleMute: (trackId: number) => void
   toggleSolo: (trackId: number) => void
   clearTrack: (trackId: number) => void
+  undoClearTrack: () => void
+  dismissClearUndo: () => void
   clearAll: () => void
   setInputGain: (gain: number) => void
   renameTrack: (trackId: number, name: string) => void
@@ -96,6 +110,8 @@ export function useAudioEngine(): UseAudioEngineReturn {
   const [isInitialized, setIsInitialized] = useState(false)
   const [isInitializing, setIsInitializing] = useState(false)
   const [initializationError, setInitializationError] = useState<string | null>(null)
+  const [recordingPreview, setRecordingPreview] = useState<{ min: number; max: number }[]>([])
+  const [lastClearedTrack, setLastClearedTrack] = useState<ClearedTrackSnapshot | null>(null)
 
   // Session state
   const [currentSessionId, setCurrentSessionId] = useState<string | null>(null)
@@ -278,6 +294,7 @@ export function useAudioEngine(): UseAudioEngineReturn {
 
     // Poll for auto-stop (engine sets isCurrentlyRecording = false at loop boundary)
     const interval = setInterval(() => {
+      setRecordingPreview(engine.getRecordingPreview().map(bin => ({ ...bin })))
       if (!engine.isRecording()) {
         clearInterval(interval)
         const buffer = engine.stopRecording()
@@ -321,6 +338,7 @@ export function useAudioEngine(): UseAudioEngineReturn {
       return updated
     })
     setIsRecording(false)
+    setRecordingPreview([])
   }, [])
 
   const stopRecording = useCallback(() => {
@@ -418,19 +436,53 @@ export function useAudioEngine(): UseAudioEngineReturn {
       setIsPlaying(false)
     }
 
+    const clearedTrack = tracksRef.current.find(t => t.id === trackId)
+    if (!clearedTrack?.audioBuffer) return
+
+    setLastClearedTrack({
+      trackId,
+      trackName: clearedTrack.name,
+      audioBuffer: clearedTrack.audioBuffer,
+      loopDuration: loopDurationRef.current,
+    })
+
     setTracks(prev => {
       const updated = prev.map(t =>
         t.id === trackId ? { ...t, audioBuffer: null } : t,
       )
-      // If no tracks have audio left, reset the tape
-      const hasAnyAudio = updated.some(t => t.audioBuffer)
-      if (!hasAnyAudio) {
-        setLoopDuration(0)
-        setCurrentTime(0)
-      }
+      const nextDuration = updated.reduce((longest, track) => (
+        Math.max(longest, track.audioBuffer?.duration ?? 0)
+      ), 0)
+      setLoopDuration(nextDuration)
+      setCurrentTime(time => Math.min(time, nextDuration))
+      if (nextDuration === 0) engine?.seekTo(0)
       return updated
     })
   }, [])
+
+  const undoClearTrack = useCallback(() => {
+    if (!lastClearedTrack) return
+
+    setTracks(prev => prev.map(track => (
+      track.id === lastClearedTrack.trackId
+        ? { ...track, audioBuffer: lastClearedTrack.audioBuffer }
+        : track
+    )))
+    setLoopDuration(Math.max(
+      loopDurationRef.current,
+      lastClearedTrack.loopDuration,
+      lastClearedTrack.audioBuffer.duration,
+    ))
+    setLastClearedTrack(null)
+  }, [lastClearedTrack])
+
+  const dismissClearUndo = useCallback(() => setLastClearedTrack(null), [])
+
+  useEffect(() => {
+    if (!lastClearedTrack) return
+    const timeout = setTimeout(() => setLastClearedTrack(null), 7000)
+    return () => clearTimeout(timeout)
+  }, [lastClearedTrack])
 
   const renameTrack = useCallback((trackId: number, name: string) => {
     setTracks(prev => prev.map(t =>
@@ -476,6 +528,8 @@ export function useAudioEngine(): UseAudioEngineReturn {
   const clearAll = useCallback(() => {
     setTracks(prev => prev.map(t => ({ ...t, audioBuffer: null })))
     setLoopDuration(0)
+    setCurrentTime(0)
+    setLastClearedTrack(null)
   }, [])
 
   // --- Session management ---
@@ -579,6 +633,7 @@ export function useAudioEngine(): UseAudioEngineReturn {
     setCurrentTime(0)
     setCurrentSessionId(session.id)
     setCurrentSessionName(session.name)
+    setLastClearedTrack(null)
   }, [])
 
   const newSession = useCallback(() => {
@@ -593,6 +648,7 @@ export function useAudioEngine(): UseAudioEngineReturn {
     setCurrentTime(0)
     setCurrentSessionId(null)
     setCurrentSessionName('Untitled Session')
+    setLastClearedTrack(null)
   }, [])
 
   const deleteSessionById = useCallback(async (id: string) => {
@@ -692,6 +748,8 @@ export function useAudioEngine(): UseAudioEngineReturn {
     isInitialized,
     isInitializing,
     initializationError,
+    recordingPreview,
+    lastClearedTrack,
     initialize,
     selectDevice,
     armTrack,
@@ -705,6 +763,8 @@ export function useAudioEngine(): UseAudioEngineReturn {
     toggleMute,
     toggleSolo,
     clearTrack,
+    undoClearTrack,
+    dismissClearUndo,
     clearAll,
     setInputGain,
     renameTrack,

@@ -5,6 +5,7 @@ interface MixerSectionProps {
   tracks: Track[]
   currentTime: number
   loopDuration: number
+  recordingPreview: { min: number; max: number }[]
   onArmTrack: (trackId: number) => void
   onSetVolume: (trackId: number, volume: number) => void
   onSetPan: (trackId: number, pan: number) => void
@@ -18,6 +19,7 @@ export default function MixerSection({
   tracks,
   currentTime,
   loopDuration,
+  recordingPreview,
   onArmTrack,
   onSetVolume,
   onSetPan,
@@ -47,6 +49,7 @@ export default function MixerSection({
               track={track}
               currentTime={currentTime}
               loopDuration={loopDuration}
+              recordingPreview={recordingPreview}
               onArmTrack={() => onArmTrack(track.id)}
               onSetVolume={(v) => onSetVolume(track.id, v)}
               onSetPan={(p) => onSetPan(track.id, p)}

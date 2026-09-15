@@ -9,6 +9,7 @@ interface ChannelStripProps {
   track: Track
   currentTime: number
   loopDuration: number
+  recordingPreview: { min: number; max: number }[]
   onArmTrack: () => void
   onSetVolume: (volume: number) => void
   onSetPan: (pan: number) => void
@@ -22,6 +23,7 @@ export default function ChannelStrip({
   track,
   currentTime,
   loopDuration,
+  recordingPreview,
   onArmTrack,
   onSetVolume,
   onSetPan,
@@ -118,6 +120,7 @@ export default function ChannelStrip({
         muted={track.muted}
         armed={track.isArmed}
         recording={track.isRecording}
+        recordingPreview={track.isRecording ? recordingPreview : []}
       />
 
       {/* Mute button */}
@@ -216,7 +219,8 @@ export default function ChannelStrip({
             style={{
               background: 'radial-gradient(circle at 42% 38%, #c0b0a0, #a09080 50%, #807060 100%)',
             }}
-            title="Delete recording"
+            title="Erase recording"
+            aria-label={`Erase ${track.name} recording`}
           >
             <svg width="8" height="8" viewBox="0 0 8 8" stroke="rgba(0,0,0,0.5)" strokeWidth="1.5" strokeLinecap="round">
               <path d="M2 2l4 4M6 2l-4 4" />
@@ -249,7 +253,7 @@ export default function ChannelStrip({
               }}
               className="w-full text-left px-3 py-1.5 text-[10px] text-red-700 hover:bg-hw-200 transition-colors"
             >
-              Delete recording
+              Erase recording
             </button>
           )}
         </div>

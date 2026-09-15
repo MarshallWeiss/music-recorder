@@ -68,6 +68,141 @@ input:focus-visible,
   min-width: min(100%, 460px);
 }
 
+.tape-position-panel {
+  width: calc(100% - 28px);
+  min-height: 66px;
+  display: grid;
+  grid-template-columns: 94px minmax(0, 1fr);
+  align-items: center;
+  gap: 14px;
+  margin-top: -2px;
+  padding: 9px 13px 8px;
+  border: 1px solid rgba(55, 45, 31, 0.34);
+  border-top-color: rgba(255, 249, 230, 0.18);
+  border-radius: 0 0 7px 7px;
+  background:
+    repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(255, 255, 255, 0.025) 2px, rgba(255, 255, 255, 0.025) 3px),
+    linear-gradient(180deg, #bdb4a3 0%, #aaa08f 100%);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.22),
+    inset 0 -2px 3px rgba(42, 33, 22, 0.18),
+    0 4px 9px rgba(36, 27, 17, 0.18);
+}
+
+.tape-counter-readout {
+  display: grid;
+  justify-items: center;
+  gap: 3px;
+}
+
+.tape-counter-label,
+.tape-path-labels {
+  color: rgba(52, 43, 32, 0.56);
+  font: 700 7px/1 'Helvetica Neue', Helvetica, Arial, sans-serif;
+  letter-spacing: 0.16em;
+  text-shadow: 0 1px 0 rgba(255, 255, 255, 0.28);
+}
+
+.tape-counter-time {
+  min-width: 78px;
+  padding: 5px 7px 4px;
+  border: 1px solid rgba(0, 0, 0, 0.52);
+  border-radius: 3px;
+  color: rgba(241, 216, 158, 0.92);
+  text-align: center;
+  font: 700 17px/1 'Courier New', Courier, monospace;
+  letter-spacing: 0.08em;
+  background: linear-gradient(180deg, #0b0c0c, #171716 55%, #090a0a);
+  box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.88), 0 1px 0 rgba(255, 255, 255, 0.12);
+  text-shadow: 0 0 7px rgba(245, 166, 35, 0.28);
+}
+
+.tape-path-control {
+  min-width: 0;
+}
+
+.tape-path-labels {
+  display: flex;
+  justify-content: space-between;
+  margin: 0 14px 6px;
+  letter-spacing: 0.11em;
+}
+
+.tape-path-rail {
+  display: grid;
+  grid-template-columns: 15px minmax(0, 1fr) 15px;
+  align-items: center;
+  gap: 5px;
+}
+
+.tape-path-reel {
+  width: 15px;
+  height: 15px;
+  border: 4px dotted rgba(56, 45, 33, 0.66);
+  border-radius: 50%;
+  background: rgba(224, 214, 195, 0.45);
+  box-shadow: inset 0 0 0 2px rgba(88, 71, 51, 0.25), 0 1px 0 rgba(255, 255, 255, 0.25);
+}
+
+.tape-position-range {
+  --tape-progress: 0%;
+  width: 100%;
+  height: 18px;
+  margin: 0;
+  appearance: none;
+  -webkit-appearance: none;
+  cursor: ew-resize;
+  background: transparent;
+}
+
+.tape-position-range:disabled {
+  cursor: default;
+  opacity: 0.52;
+}
+
+.tape-position-range::-webkit-slider-runnable-track {
+  height: 5px;
+  border: 1px solid rgba(24, 19, 13, 0.66);
+  border-radius: 99px;
+  background: linear-gradient(90deg, #4e2918 0 var(--tape-progress), #211a15 var(--tape-progress) 100%);
+  box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.82), 0 1px 0 rgba(255, 255, 255, 0.15);
+}
+
+.tape-position-range::-webkit-slider-thumb {
+  width: 9px;
+  height: 16px;
+  margin-top: -6px;
+  appearance: none;
+  -webkit-appearance: none;
+  border: 1px solid rgba(44, 34, 23, 0.68);
+  border-radius: 2px;
+  background: linear-gradient(180deg, #e5dcca, #958a79);
+  box-shadow: 0 2px 4px rgba(26, 19, 11, 0.45), inset 0 1px 0 rgba(255, 255, 255, 0.45);
+}
+
+.tape-position-range::-moz-range-track {
+  height: 5px;
+  border: 1px solid rgba(24, 19, 13, 0.66);
+  border-radius: 99px;
+  background: #211a15;
+  box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.82), 0 1px 0 rgba(255, 255, 255, 0.15);
+}
+
+.tape-position-range::-moz-range-progress {
+  height: 5px;
+  border-radius: 99px;
+  background: #4e2918;
+}
+
+.tape-position-range::-moz-range-thumb {
+  width: 9px;
+  height: 16px;
+  border: 1px solid rgba(44, 34, 23, 0.68);
+  border-radius: 2px;
+  background: linear-gradient(180deg, #e5dcca, #958a79);
+  box-shadow: 0 2px 4px rgba(26, 19, 11, 0.45), inset 0 1px 0 rgba(255, 255, 255, 0.45);
+}
+
 .recorder-mixer-scroll {
   max-width: 100%;
   overflow-x: auto;
@@ -91,6 +226,74 @@ input:focus-visible,
 
 .track-waveform canvas {
   display: block;
+}
+
+.track-waveform.is-clipping {
+  border-color: rgba(181, 58, 48, 0.78);
+  box-shadow:
+    inset 0 2px 5px rgba(0, 0, 0, 0.72),
+    inset 0 -1px 0 rgba(255, 248, 224, 0.08),
+    0 0 8px rgba(181, 58, 48, 0.55);
+}
+
+.recorder-undo-strip {
+  position: sticky;
+  z-index: 30;
+  bottom: 9px;
+  align-self: center;
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  min-width: 250px;
+  max-width: calc(100% - 32px);
+  margin: -42px auto 10px;
+  padding: 7px 8px 7px 10px;
+  border: 1px solid rgba(12, 13, 13, 0.8);
+  border-radius: 4px;
+  color: rgba(238, 226, 199, 0.78);
+  background: linear-gradient(180deg, #2a2b29 0%, #171918 100%);
+  box-shadow: 0 8px 18px rgba(25, 18, 10, 0.32), inset 0 1px 0 rgba(255, 255, 255, 0.07);
+  font: 700 8px/1 'Helvetica Neue', Helvetica, Arial, sans-serif;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.recorder-undo-lamp {
+  width: 7px;
+  height: 7px;
+  flex: 0 0 auto;
+  border-radius: 50%;
+  background: #d89425;
+  box-shadow: 0 0 7px rgba(245, 166, 35, 0.62);
+}
+
+.recorder-undo-message {
+  min-width: 0;
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.recorder-undo-button {
+  padding: 6px 9px 5px;
+  border: 1px solid rgba(173, 151, 109, 0.38);
+  border-radius: 2px;
+  color: #f5c361;
+  background: linear-gradient(180deg, #4a4438, #2f2b24);
+  box-shadow: 0 2px 0 rgba(0, 0, 0, 0.32), inset 0 1px 0 rgba(255, 255, 255, 0.09);
+}
+
+.recorder-undo-button:active {
+  transform: translateY(1px);
+  box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.42);
+}
+
+.recorder-undo-dismiss {
+  width: 22px;
+  height: 22px;
+  color: rgba(238, 226, 199, 0.48);
+  font: 400 16px/1 sans-serif;
 }
 
 .shortcut-legend {

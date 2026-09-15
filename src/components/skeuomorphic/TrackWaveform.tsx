@@ -7,11 +7,13 @@ interface TrackWaveformProps {
   muted: boolean
   armed: boolean
   recording: boolean
+  recordingPreview: { min: number; max: number }[]
 }
 
 const WIDTH = 72
 const HEIGHT = 38
 const BINS = 72
+const LIVE_PREVIEW_BINS = 800
 
 function getPeaks(buffer: AudioBuffer | null): number[] {
   if (!buffer) return []
@@ -35,9 +37,24 @@ export default function TrackWaveform({
   muted,
   armed,
   recording,
+  recordingPreview,
 }: TrackWaveformProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const peaks = useMemo(() => getPeaks(buffer), [buffer])
+  const livePeaks = useMemo(() => {
+    if (!recordingPreview.length) return []
+    const binsPerPixel = Math.ceil(LIVE_PREVIEW_BINS / BINS)
+    return Array.from({ length: Math.min(BINS, Math.ceil(recordingPreview.length / binsPerPixel)) }, (_, index) => {
+      const start = index * binsPerPixel
+      const end = Math.min(recordingPreview.length, start + binsPerPixel)
+      let peak = 0
+      for (let i = start; i < end; i += 1) {
+        peak = Math.max(peak, Math.abs(recordingPreview[i].min), Math.abs(recordingPreview[i].max))
+      }
+      return peak
+    })
+  }, [recordingPreview])
+  const isClipping = recording && livePeaks.some(peak => peak >= 0.98)
 
   useEffect(() => {
     const canvas = canvasRef.current
@@ -72,7 +89,26 @@ export default function TrackWaveform({
     context.lineTo(WIDTH, HEIGHT / 2 + 0.5)
     context.stroke()
 
-    if (peaks.length > 0) {
+    if (recording && livePeaks.length > 0) {
+      livePeaks.forEach((peak, index) => {
+        const x = index + 0.5
+        const height = Math.max(1, peak * (HEIGHT - 7))
+        context.strokeStyle = peak >= 0.98
+          ? 'rgba(255, 196, 112, 0.98)'
+          : 'rgba(224, 69, 60, 0.92)'
+        context.beginPath()
+        context.moveTo(x, (HEIGHT - height) / 2)
+        context.lineTo(x, (HEIGHT + height) / 2)
+        context.stroke()
+      })
+
+      const headX = Math.min(WIDTH - 1, (livePeaks.length / BINS) * WIDTH)
+      context.strokeStyle = 'rgba(255, 229, 182, 0.92)'
+      context.beginPath()
+      context.moveTo(headX, 2)
+      context.lineTo(headX, HEIGHT - 2)
+      context.stroke()
+    } else if (peaks.length > 0 && !recording) {
       const progress = duration > 0 ? Math.max(0, Math.min(1, currentTime / duration)) : 0
       peaks.forEach((peak, index) => {
         const x = index + 0.5
@@ -114,19 +150,19 @@ export default function TrackWaveform({
     gloss.addColorStop(0.42, 'rgba(255,255,255,0)')
     context.fillStyle = gloss
     context.fillRect(0, 0, WIDTH, HEIGHT)
-  }, [armed, currentTime, duration, muted, peaks, recording])
+  }, [armed, currentTime, duration, livePeaks, muted, peaks, recording])
 
-  const state = buffer
-    ? `${muted ? 'Muted recording' : 'Recorded audio'}, ${Math.round(duration)} seconds`
-    : recording
-      ? 'Recording now'
+  const state = recording
+    ? isClipping ? 'Recording now, input clipping' : 'Recording now'
+    : buffer
+      ? `${muted ? 'Muted recording' : 'Recorded audio'}, ${Math.round(duration)} seconds`
       : armed
         ? 'Armed and ready to record'
         : 'Empty track'
 
   return (
     <div
-      className="track-waveform rounded-sm overflow-hidden"
+      className={`track-waveform rounded-sm overflow-hidden ${isClipping ? 'is-clipping' : ''}`}
       aria-label={state}
       role="img"
     >

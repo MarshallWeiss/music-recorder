@@ -34,6 +34,8 @@ export default function App() {
     isInitialized,
     isInitializing,
     initializationError,
+    recordingPreview,
+    lastClearedTrack,
     initialize,
     selectDevice,
     armTrack,
@@ -46,6 +48,8 @@ export default function App() {
     toggleMute,
     toggleSolo,
     clearTrack,
+    undoClearTrack,
+    dismissClearUndo,
     setInputGain,
     renameTrack,
     setBpm,
@@ -252,6 +256,7 @@ export default function App() {
                     onSetSessionName={setSessionName}
                     loopDuration={loopDuration}
                     currentTime={currentTime}
+                    onSeekTo={seekTo}
                   />
                   <TransportButtons
                     isRecording={isRecording}
@@ -274,6 +279,7 @@ export default function App() {
                   tracks={tracks}
                   currentTime={currentTime}
                   loopDuration={loopDuration}
+                  recordingPreview={recordingPreview}
                   onArmTrack={armTrack}
                   onSetVolume={setVolume}
                   onSetPan={setPan}
@@ -285,6 +291,26 @@ export default function App() {
               </>
             )}
           </div>
+
+          {lastClearedTrack && (
+            <div className="recorder-undo-strip" role="status" aria-live="polite">
+              <span className="recorder-undo-lamp" aria-hidden="true" />
+              <span className="recorder-undo-message">
+                {lastClearedTrack.trackName} erased
+              </span>
+              <button type="button" onClick={undoClearTrack} className="recorder-undo-button">
+                Undo
+              </button>
+              <button
+                type="button"
+                onClick={dismissClearUndo}
+                className="recorder-undo-dismiss"
+                aria-label="Dismiss erase notice"
+              >
+                ×
+              </button>
+            </div>
+          )}
 
           {/* Bottom: Session drawer */}
           <div className="border-t border-hw-400/20">

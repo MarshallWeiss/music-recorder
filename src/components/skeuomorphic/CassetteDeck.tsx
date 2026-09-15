@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect } from 'react'
+import TapeCounter from './TapeCounter'
 
 interface CassetteDeckProps {
   isPlaying: boolean
@@ -7,6 +8,7 @@ interface CassetteDeckProps {
   onSetSessionName: (name: string) => void
   loopDuration: number
   currentTime: number
+  onSeekTo?: (time: number) => void
 }
 
 function TapeHub({ spinning, size }: { spinning: boolean; size: number }) {
@@ -63,6 +65,7 @@ export default function CassetteDeck({
   onSetSessionName,
   loopDuration,
   currentTime,
+  onSeekTo,
 }: CassetteDeckProps) {
   const [editing, setEditing] = useState(false)
   const [editValue, setEditValue] = useState('')
@@ -408,6 +411,11 @@ export default function CassetteDeck({
           </div>
         </div>
       </div>
+      <TapeCounter
+        currentTime={currentTime}
+        loopDuration={loopDuration}
+        onSeekTo={onSeekTo}
+      />
     </div>
   )
 }

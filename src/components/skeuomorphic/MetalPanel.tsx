@@ -34,8 +34,6 @@ interface MetalPanelProps {
 
 export default function MetalPanel({
   engine,
-  isPlaying,
-  isRecording,
   inputGain,
   setInputGain,
   bpm,
@@ -137,20 +135,9 @@ export default function MetalPanel({
   const selectedDevice = devices.find(d => d.deviceId === selectedDeviceId)
   const deviceLabel = selectedDevice?.label || 'No device'
 
-  // Get analyser for VU meters
-  // During playback: show mix of playing tracks
-  // Otherwise: always show live input level (like a traditional input meter)
-  const getLeftAnalyser = () => {
-    if (!engine) return null
-    if (isPlaying && !isRecording) return engine.getAnalyser(0) ?? engine.getAnalyser(1)
-    return engine.getInputAnalyser()
-  }
-
-  const getRightAnalyser = () => {
-    if (!engine) return null
-    if (isPlaying && !isRecording) return engine.getAnalyser(2) ?? engine.getAnalyser(1) ?? engine.getAnalyser(0)
-    return engine.getInputAnalyser()
-  }
+  // Left meter always shows the live input, right meter the summed playback
+  const inputAnalyser = engine?.getInputAnalyser() ?? null
+  const mixAnalyser = engine?.getMixAnalyser() ?? null
 
   // BPM knob: map 60-200 to 0-1
   const bpmToKnob = (b: number) => (b - 60) / 140
@@ -176,7 +163,7 @@ export default function MetalPanel({
         />
         <button
           onClick={() => devices.length > 1 && setDeviceDropdownOpen(!deviceDropdownOpen)}
-          className={`text-[9px] font-label uppercase tracking-wider text-engraved font-bold text-center max-w-full ${devices.length > 1 ? 'cursor-pointer hover:text-hw-700' : ''}`}
+          className={`text-[12px] font-label uppercase tracking-wider text-engraved font-bold text-center max-w-full ${devices.length > 1 ? 'cursor-pointer hover:text-hw-700' : ''}`}
           title={devices.length > 1 ? 'Select input device' : deviceLabel}
         >
           {deviceLabel}
@@ -209,7 +196,7 @@ export default function MetalPanel({
                   onSelectDevice(d.deviceId)
                   setDeviceDropdownOpen(false)
                 }}
-                className={`w-full text-left px-3 py-1.5 text-[10px] font-label hover:bg-hw-300/50 ${
+                className={`w-full text-left px-3 py-1.5 text-[12px] font-label hover:bg-hw-300/50 ${
                   d.deviceId === selectedDeviceId ? 'bg-hw-400/30 font-bold' : ''
                 }`}
                 style={{ color: '#4a3a28' }}
@@ -223,8 +210,8 @@ export default function MetalPanel({
 
       {/* VU Meters (center) */}
       <div className="recorder-meter-bank flex items-center gap-3 justify-center">
-        <div className="recorder-vu-meter"><VUMeter analyser={getLeftAnalyser()} label="L" width={190} height={120} /></div>
-        <div className="recorder-vu-meter"><VUMeter analyser={getRightAnalyser()} label="R" width={190} height={120} /></div>
+        <div className="recorder-vu-meter"><VUMeter analyser={inputAnalyser} label="Input" width={190} height={120} /></div>
+        <div className="recorder-vu-meter"><VUMeter analyser={mixAnalyser} label="Mix" width={190} height={120} /></div>
       </div>
 
       {/* Right side controls */}
@@ -261,7 +248,7 @@ export default function MetalPanel({
                 size="lg"
                 ticks={9}
               />
-              <span className="text-[9px] font-mono text-hw-600 font-bold">{bpm}</span>
+              <span className="text-[10px] font-mono text-engraved font-bold">{bpm}</span>
             </div>
             <div className="flex flex-col items-center gap-1.5">
               <BeatIndicator currentBeat={currentBeat} metronomeOn={metronomeOn} />
@@ -288,7 +275,7 @@ export default function MetalPanel({
                 {/* Count-in toggle */}
                 <button
                   onClick={toggleCountIn}
-                  className={`flex items-center gap-0.5 px-1 py-0.5 rounded transition-all ${
+                  className={`flex items-center gap-1 px-1.5 py-0.5 rounded whitespace-nowrap transition-all ${
                     countInEnabled ? 'shadow-button-down' : 'shadow-button-up'
                   }`}
                   style={{
@@ -299,7 +286,7 @@ export default function MetalPanel({
                   title={countInEnabled ? 'Count-in enabled (1 bar before overdub)' : 'Count-in disabled'}
                 >
                   <StatusLED active={countInEnabled} color="amber" size="sm" />
-                  <span className="text-[6px] font-label uppercase tracking-wider font-bold" style={{ color: countInEnabled ? 'rgba(200,180,100,0.9)' : 'rgba(0,0,0,0.3)' }}>
+                  <span className="text-[12px] font-label uppercase tracking-wider font-bold" style={{ color: countInEnabled ? 'rgba(200,180,100,0.9)' : 'rgba(0,0,0,0.3)' }}>
                     C-In
                   </span>
                 </button>
@@ -326,7 +313,7 @@ export default function MetalPanel({
             >
               <StatusLED active={tunerVisible} color="blue" size="sm" />
             </button>
-            <span className="text-[7px] font-label uppercase tracking-wider text-engraved font-bold">
+            <span className="text-[12px] font-label uppercase tracking-wider text-engraved font-bold">
               Tuner
             </span>
           </div>
@@ -347,7 +334,7 @@ export default function MetalPanel({
             >
               <StatusLED active={metronomeOn} color={metronomeAudible ? 'green' : 'amber'} size="sm" />
             </button>
-            <span className="text-[7px] font-label uppercase tracking-wider text-engraved font-bold">
+            <span className="text-[12px] font-label uppercase tracking-wider text-engraved font-bold">
               Metro
             </span>
           </div>

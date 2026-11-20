@@ -11,7 +11,7 @@ export default function LooperView({
   onStompClick,
 }: LooperViewProps) {
   return (
-    <div className="flex flex-col items-center gap-4">
+    <div className="flex flex-col items-center gap-4 flex-shrink-0" style={{ width: 300 }}>
       {/* Stomp button */}
       <StompButton looper={looper} onClick={onStompClick} />
     </div>

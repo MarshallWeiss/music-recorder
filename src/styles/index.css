@@ -10,6 +10,80 @@ body {
   background: #1a1612;
 }
 
+/*
+ * Skins. Each skin is a set of tokens on the shell; components read the tokens
+ * and never hardcode faceplate colours. Add a skin by adding a block here and
+ * an entry in src/skins.ts.
+ */
+.recorder-shell {
+  --desk: #1a1612;
+  --body-base: linear-gradient(180deg, #ece0cc 0%, #e4d8c0 15%, #ddd0b8 35%, #d4c8b0 60%, #c8bca0 85%, #c0b498 100%);
+  --body-silk: rgba(20, 15, 5, 0.46);
+  --body-silk-shadow: 0 1px 0 rgba(255, 250, 240, 0.3);
+  --body-tick: rgba(20, 15, 5, 0.4);
+  --panel-base: linear-gradient(180deg, #c8c0b2 0%, #beb6a6 25%, #c6beb0 50%, #bab2a2 75%, #b4ac9c 100%);
+  --panel-silk: rgba(20, 15, 5, 0.46);
+  --panel-silk-shadow: 0 1px 0 rgba(255, 250, 240, 0.3);
+  --panel-tick: rgba(20, 15, 5, 0.45);
+  --mixer-bg: linear-gradient(180deg, #dcd0b8 0%, #d0c4ac 30%, #c8bca4 70%, #c0b49c 100%);
+  --divider: rgba(20, 15, 5, 0.1);
+  --accent-bg: linear-gradient(180deg, #506880 0%, #3a5a7a 40%, #2a4a6a 100%);
+  --accent-ink: rgba(214, 228, 242, 0.96);
+  --badge-ink: rgba(44, 36, 28, 0.72);
+  background: var(--desk);
+}
+
+.recorder-shell[data-skin='petrol'] {
+  --desk: #121617;
+  --body-base: linear-gradient(180deg, #2a626b 0%, #235660 18%, #1d4a54 45%, #183f48 75%, #13343c 100%);
+  --body-silk: rgba(244, 236, 214, 0.82);
+  --body-silk-shadow: 0 1px 0 rgba(0, 0, 0, 0.35);
+  --body-tick: rgba(244, 236, 214, 0.5);
+  --mixer-bg: linear-gradient(180deg, rgba(4, 18, 22, 0.34), rgba(4, 18, 22, 0.46));
+  --divider: rgba(244, 236, 214, 0.12);
+  --accent-bg: linear-gradient(180deg, #e98a3c 0%, #d67227 45%, #b85a1a 100%);
+  --accent-ink: rgba(255, 244, 226, 0.98);
+  --badge-ink: rgba(244, 236, 214, 0.92);
+}
+
+.recorder-shell[data-skin='oxblood'] {
+  --desk: #151010;
+  --body-base: linear-gradient(180deg, #7a2a26 0%, #6b2320 18%, #5c1d1b 45%, #4e1816 75%, #401312 100%);
+  --body-silk: rgba(246, 232, 206, 0.84);
+  --body-silk-shadow: 0 1px 0 rgba(0, 0, 0, 0.4);
+  --body-tick: rgba(246, 232, 206, 0.5);
+  --mixer-bg: linear-gradient(180deg, rgba(24, 4, 4, 0.34), rgba(24, 4, 4, 0.48));
+  --divider: rgba(246, 232, 206, 0.12);
+  --accent-bg: linear-gradient(180deg, #e2c27a 0%, #cfa957 45%, #b08a3c 100%);
+  --accent-ink: rgba(52, 30, 12, 0.92);
+  --badge-ink: rgba(246, 232, 206, 0.92);
+}
+
+.recorder-shell[data-skin='studio'] {
+  --desk: #0b0b0c;
+  --body-base: linear-gradient(180deg, #2b2c2f 0%, #25262a 20%, #1f2023 50%, #1a1b1d 80%, #151617 100%);
+  --body-silk: rgba(232, 226, 210, 0.74);
+  --body-silk-shadow: 0 1px 0 rgba(0, 0, 0, 0.5);
+  --body-tick: rgba(232, 226, 210, 0.42);
+  --panel-base: linear-gradient(180deg, #3a3b3f 0%, #333438 30%, #2e2f33 60%, #28292c 100%);
+  --panel-silk: rgba(232, 226, 210, 0.74);
+  --panel-silk-shadow: 0 1px 0 rgba(0, 0, 0, 0.5);
+  --panel-tick: rgba(232, 226, 210, 0.45);
+  --mixer-bg: linear-gradient(180deg, rgba(0, 0, 0, 0.3), rgba(0, 0, 0, 0.42));
+  --divider: rgba(232, 226, 210, 0.1);
+  --accent-bg: linear-gradient(180deg, #f0b04a 0%, #e09a2c 45%, #bf7d1a 100%);
+  --accent-ink: rgba(40, 24, 6, 0.94);
+  --badge-ink: rgba(240, 176, 74, 0.95);
+}
+
+/* Studio swaps the walnut cheeks for black lacquer */
+.recorder-shell[data-skin='studio'] .texture-wood {
+  background:
+    radial-gradient(ellipse at 50% 20%, rgba(255, 255, 255, 0.1), transparent 55%),
+    linear-gradient(180deg, #232325 0%, #17171a 40%, #101012 100%);
+  filter: none;
+}
+
 html,
 body,
 #root {
@@ -49,13 +123,22 @@ input:focus-visible,
 
 .recorder-metal-panel {
   display: grid;
-  grid-template-columns: minmax(150px, 200px) minmax(340px, 1fr) minmax(96px, auto);
+  /* Equal side columns keep the meters centred whatever opens on the right */
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
   align-items: center;
   gap: 24px;
 }
 
 .recorder-meter-bank {
   min-width: 0;
+}
+
+.recorder-input-cluster {
+  justify-self: start;
+}
+
+.recorder-control-cluster {
+  justify-self: end;
 }
 
 .recorder-work-area {
@@ -72,7 +155,7 @@ input:focus-visible,
   width: calc(100% - 28px);
   min-height: 66px;
   display: grid;
-  grid-template-columns: 94px minmax(0, 1fr);
+  grid-template-columns: 96px minmax(0, 1fr);
   align-items: center;
   gap: 14px;
   margin-top: -2px;
@@ -98,14 +181,16 @@ input:focus-visible,
 .tape-counter-label,
 .tape-path-labels {
   color: rgba(52, 43, 32, 0.56);
-  font: 700 7px/1 'Helvetica Neue', Helvetica, Arial, sans-serif;
+  font: 700 12px/1 'Barlow Condensed', 'Helvetica Neue', Helvetica, Arial, sans-serif;
   letter-spacing: 0.16em;
   text-shadow: 0 1px 0 rgba(255, 255, 255, 0.28);
 }
 
 .tape-counter-time {
-  min-width: 78px;
-  padding: 5px 7px 4px;
+  min-width: 84px;
+  display: flex;
+  justify-content: center;
+  padding: 8px 8px 7px;
   border: 1px solid rgba(0, 0, 0, 0.52);
   border-radius: 3px;
   color: rgba(241, 216, 158, 0.92);
@@ -213,7 +298,10 @@ input:focus-visible,
 
 .recorder-mixer-bank {
   width: max-content;
-  min-width: 416px;
+}
+
+.channel-strip {
+  width: 126px;
 }
 
 .track-waveform {
@@ -253,7 +341,7 @@ input:focus-visible,
   color: rgba(238, 226, 199, 0.78);
   background: linear-gradient(180deg, #2a2b29 0%, #171918 100%);
   box-shadow: 0 8px 18px rgba(25, 18, 10, 0.32), inset 0 1px 0 rgba(255, 255, 255, 0.07);
-  font: 700 8px/1 'Helvetica Neue', Helvetica, Arial, sans-serif;
+  font: 700 12px/1 'Barlow Condensed', 'Helvetica Neue', Helvetica, Arial, sans-serif;
   letter-spacing: 0.12em;
   text-transform: uppercase;
 }
@@ -301,8 +389,8 @@ input:focus-visible,
   align-items: center;
   justify-content: center;
   gap: 13px;
-  color: rgba(55, 45, 34, 0.48);
-  font: 600 8px/1 'Helvetica Neue', Helvetica, Arial, sans-serif;
+  color: var(--silk);
+  font: 600 12px/1 'Barlow Condensed', 'Helvetica Neue', Helvetica, Arial, sans-serif;
 }
 
 .shortcut-item {
@@ -323,8 +411,8 @@ input:focus-visible,
 }
 
 .recorder-power-console {
-  width: min(360px, calc(100% - 32px));
-  min-height: 320px;
+  width: min(440px, calc(100% - 32px));
+  min-height: 380px;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -349,12 +437,12 @@ input:focus-visible,
 }
 
 .recorder-brand-plate > span {
-  font: 800 18px/1 'Helvetica Neue', Helvetica, Arial, sans-serif;
+  font: 700 34px/1 'Barlow Condensed', 'Helvetica Neue', Helvetica, Arial, sans-serif;
   letter-spacing: 0.13em;
 }
 
 .recorder-brand-plate small {
-  font: 500 9px/1.2 'Helvetica Neue', Helvetica, Arial, sans-serif;
+  font: 500 14px/1.2 'Barlow Condensed', 'Helvetica Neue', Helvetica, Arial, sans-serif;
   letter-spacing: 0.08em;
 }
 
@@ -385,7 +473,7 @@ input:focus-visible,
   color: rgba(67, 44, 31, 0.84);
   background: rgba(118, 64, 44, 0.1);
   border: 1px solid rgba(118, 64, 44, 0.2);
-  font: 600 10px/1.45 'Helvetica Neue', Helvetica, Arial, sans-serif;
+  font: 600 12px/1.45 'Barlow Condensed', 'Helvetica Neue', Helvetica, Arial, sans-serif;
 }
 
 .recorder-error-dot {
@@ -401,7 +489,7 @@ input:focus-visible,
 .recorder-input-error {
   margin-top: 4px;
   color: #7a2926;
-  font: 700 8px/1.2 'Helvetica Neue', Helvetica, Arial, sans-serif;
+  font: 700 12px/1.2 'Barlow Condensed', 'Helvetica Neue', Helvetica, Arial, sans-serif;
   letter-spacing: 0.04em;
 }
 
@@ -432,13 +520,13 @@ input:focus-visible,
     grid-row: 2;
   }
 
-  .recorder-work-area:not(.recorder-work-area--looper) {
+  .recorder-work-area {
     flex-direction: column;
     align-items: center;
   }
 
   .recorder-mixer-scroll {
-    width: min(100%, 460px);
+    width: min(100%, 512px);
   }
 }
 
@@ -511,8 +599,8 @@ input:focus-visible,
   }
 
   .looper-stomp-button {
-    width: 88px !important;
-    height: 88px !important;
+    width: 104px !important;
+    height: 104px !important;
   }
 }
 
@@ -546,6 +634,8 @@ input:focus-visible,
     grid-row: 3;
     justify-self: center;
     max-width: 100%;
+    flex-wrap: wrap;
+    justify-content: center;
   }
 
   .recorder-vu-meter canvas {
@@ -631,6 +721,242 @@ input:focus-visible,
   }
 }
 
+/* Tape view: four track lanes under one playhead, set in a dark recessed window */
+.tape-lanes {
+  position: relative;
+  padding: 5px 5px;
+  border: 1px solid rgba(0, 0, 0, 0.6);
+  border-radius: 3px;
+  background: linear-gradient(180deg, #101212, #1b1c1a 55%, #0e1010);
+  box-shadow: inset 0 2px 5px rgba(0, 0, 0, 0.85), 0 1px 0 rgba(255, 255, 255, 0.14);
+}
+
+.tape-lanes canvas {
+  display: block;
+}
+
+.tape-lanes:focus-within {
+  outline: 2px solid rgba(50, 88, 116, 0.9);
+  outline-offset: 3px;
+}
+
+/* The seek control is the whole window: an invisible range input laid over the lanes */
+.tape-lanes-seek {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  opacity: 0;
+  cursor: ew-resize;
+}
+
+.tape-lanes-seek:disabled {
+  cursor: default;
+}
+
+/* Badge and mode switch row */
+.recorder-mode-row {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 52px;
+  padding: 8px 24px;
+  border-bottom: 1px solid var(--divider);
+}
+
+.recorder-badge {
+  position: absolute;
+  left: 28px;
+  top: 50%;
+  transform: translateY(-50%);
+  display: flex;
+  align-items: baseline;
+  gap: 12px;
+  color: var(--badge-ink);
+  text-shadow: var(--silk-shadow);
+}
+
+.recorder-badge > span {
+  font: 700 23px/1 'Barlow Condensed', 'Helvetica Neue', Helvetica, Arial, sans-serif;
+  letter-spacing: 0.22em;
+}
+
+.recorder-badge small {
+  font: 500 12px/1 'Barlow Condensed', 'Helvetica Neue', Helvetica, Arial, sans-serif;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  opacity: 0.62;
+}
+
+.recorder-mode-switch {
+  display: flex;
+  overflow: hidden;
+  border-radius: 3px;
+  background: linear-gradient(180deg, #c4bca8 0%, #bab2a0 100%);
+  box-shadow: inset 0 2px 4px rgba(20, 15, 5, 0.3), inset 0 -1px 0 rgba(255, 250, 240, 0.1), 0 1px 0 rgba(255, 250, 240, 0.1);
+}
+
+.recorder-mode-switch button {
+  padding: 8px 18px 7px;
+  color: rgba(60, 50, 40, 0.55);
+  font: 700 13px/1 'Barlow Condensed', 'Helvetica Neue', Helvetica, Arial, sans-serif;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  transition: background 120ms, color 120ms;
+}
+
+.recorder-mode-switch button[aria-pressed='true'] {
+  color: var(--accent-ink);
+  background: var(--accent-bg);
+  box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.3), inset 0 -1px 0 rgba(255, 250, 240, 0.08);
+}
+
+/* Finish (skin) picker in the bottom bar */
+.skin-picker {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  margin-left: 14px;
+  font: 700 12px/1 'Barlow Condensed', 'Helvetica Neue', Helvetica, Arial, sans-serif;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+.skin-swatch {
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  border: 1px solid rgba(0, 0, 0, 0.45);
+  box-shadow: inset 0 1px 1px rgba(255, 255, 255, 0.35), 0 1px 2px rgba(0, 0, 0, 0.35);
+  transition: transform 120ms;
+}
+
+.skin-swatch:hover {
+  transform: scale(1.15);
+}
+
+.skin-swatch.is-selected {
+  box-shadow: inset 0 1px 1px rgba(255, 255, 255, 0.35), 0 0 0 2px var(--desk), 0 0 0 3.5px var(--silk);
+}
+
+/* Transport lamps spill light onto the faceplate */
+.transport-glow {
+  inset: -26px -30px -14px;
+  animation: transport-glow-in 220ms ease-out;
+}
+
+@keyframes transport-glow-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+/* Power-on: lamps and meters warm up instead of snapping on */
+.recorder-main.is-powered {
+  animation: recorder-power-on 900ms ease-out;
+}
+
+.recorder-main.is-powered .recorder-vu-meter {
+  animation: lamp-warm-up 1500ms ease-out;
+}
+
+.recorder-vu-meter canvas {
+  box-shadow: 0 0 16px rgba(255, 214, 150, 0.22);
+}
+
+@keyframes recorder-power-on {
+  from { filter: brightness(0.72); }
+  to { filter: brightness(1); }
+}
+
+@keyframes lamp-warm-up {
+  0% { filter: brightness(0.3) sepia(0.4); }
+  18% { filter: brightness(0.75) sepia(0.3); }
+  26% { filter: brightness(0.5) sepia(0.3); }
+  100% { filter: brightness(1) sepia(0); }
+}
+
+/* Looper readout: a small recessed display above the footswitch */
+.looper-readout {
+  /* Fixed width: the text changes with every tap and must not move the layout */
+  width: 250px;
+  white-space: nowrap;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  padding: 9px 14px 8px;
+  border: 1px solid rgba(0, 0, 0, 0.52);
+  border-radius: 3px;
+  color: rgba(241, 216, 158, 0.92);
+  font: 700 15px/1 'Courier New', Courier, monospace;
+  letter-spacing: 0.14em;
+  background: linear-gradient(180deg, #0b0c0c, #171716 55%, #090a0a);
+  box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.88), 0 1px 0 rgba(255, 255, 255, 0.12);
+  text-shadow: 0 0 7px rgba(245, 166, 35, 0.28);
+}
+
+.looper-readout-lamp {
+  width: 8px;
+  height: 8px;
+  flex: 0 0 auto;
+  border-radius: 50%;
+  background: #3c3732;
+}
+
+.looper-readout-layers {
+  color: rgba(241, 216, 158, 0.5);
+  font-size: 11px;
+  letter-spacing: 0.08em;
+}
+
+.looper-gestures {
+  display: grid;
+  /* Fixed columns: the hint beside "Tap" changes with the looper's state */
+  width: 290px;
+  grid-template-columns: 124px minmax(0, 1fr);
+  gap: 7px 12px;
+  align-items: center;
+  color: var(--silk);
+  font: 600 12px/1 'Barlow Condensed', 'Helvetica Neue', Helvetica, Arial, sans-serif;
+}
+
+.looper-gestures kbd {
+  padding: 3px 6px 2px;
+  border-radius: 3px;
+  color: rgba(52, 44, 34, 0.7);
+  text-align: center;
+  white-space: nowrap;
+  background: linear-gradient(180deg, rgba(226, 217, 198, 0.88), rgba(177, 166, 146, 0.9));
+  border: 1px solid rgba(80, 68, 51, 0.28);
+  box-shadow: 0 1px 0 rgba(255, 255, 255, 0.28), inset 0 -1px 1px rgba(34, 26, 17, 0.12);
+  font: inherit;
+}
+
+/* Tape drawer slides over the bottom of the device instead of pushing it */
+.tape-drawer-panel {
+  position: absolute;
+  z-index: 40;
+  left: 8px;
+  right: 8px;
+  bottom: 100%;
+  padding: 12px;
+  overflow-x: auto;
+  border-radius: 5px 5px 0 0;
+  background: linear-gradient(180deg, #1a1816 0%, #222018 100%);
+  box-shadow:
+    0 -10px 26px rgba(25, 18, 10, 0.34),
+    inset 0 2px 6px rgba(0, 0, 0, 0.6),
+    inset 0 -1px 0 rgba(255, 250, 240, 0.06);
+  animation: tape-drawer-in 160ms ease-out;
+}
+
+@keyframes tape-drawer-in {
+  from { transform: translateY(10px); opacity: 0; }
+  to { transform: translateY(0); opacity: 1; }
+}
+
 /* Walnut wood grain — layered gradients at varying angles for natural look */
 .texture-wood {
   background:
@@ -678,46 +1004,29 @@ input:focus-visible,
   filter: contrast(1.08);
 }
 
-/* Brushed aluminum — horizontal striations with warm silver base */
+/* Top panel — horizontal brush lines over the skin's panel colour */
 .texture-metal {
+  --silk: var(--panel-silk);
+  --silk-shadow: var(--panel-silk-shadow);
+  --tick: var(--panel-tick);
   background:
-    /* Overhead light reflection */
     radial-gradient(ellipse at 50% 15%, rgba(255,250,240,0.10), transparent 50%),
-    /* Fine brush lines — 1px spacing */
-    repeating-linear-gradient(
-      0deg,
-      transparent,
-      transparent 1px,
-      rgba(255,250,240,0.035) 1px,
-      rgba(255,250,240,0.035) 2px
-    ),
-    /* Medium brush lines — 1.5px spacing */
-    repeating-linear-gradient(
-      0deg,
-      transparent,
-      transparent 2px,
-      rgba(20,15,5,0.02) 2px,
-      rgba(20,15,5,0.02) 3.5px
-    ),
-    /* Wide brush lines — 2.5px spacing */
-    repeating-linear-gradient(
-      0deg,
-      transparent,
-      transparent 4px,
-      rgba(255,250,240,0.025) 4px,
-      rgba(255,250,240,0.025) 6.5px
-    ),
-    /* Warm silver base */
-    linear-gradient(180deg, #c8c0b2 0%, #beb6a6 25%, #c6beb0 50%, #bab2a2 75%, #b4ac9c 100%);
+    repeating-linear-gradient(0deg, transparent, transparent 1px, rgba(255,250,240,0.035) 1px, rgba(255,250,240,0.035) 2px),
+    repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(20,15,5,0.02) 2px, rgba(20,15,5,0.02) 3.5px),
+    repeating-linear-gradient(0deg, transparent, transparent 4px, rgba(255,250,240,0.025) 4px, rgba(255,250,240,0.025) 6.5px),
+    var(--panel-base);
 }
 
-/* Cream body with overhead lighting */
+/* Device body — overhead lighting over the skin's enamel colour */
 .texture-body {
+  --silk: var(--body-silk);
+  --silk-shadow: var(--body-silk-shadow);
+  --tick: var(--body-tick);
   background:
-    radial-gradient(ellipse at 40% 8%, rgba(255,250,240,0.18), transparent 40%),
-    radial-gradient(ellipse at 30% 20%, rgba(255,250,240,0.08), transparent 50%),
-    radial-gradient(ellipse at 70% 90%, rgba(20,15,5,0.08), transparent 40%),
-    linear-gradient(180deg, #ece0cc 0%, #e4d8c0 15%, #ddd0b8 35%, #d4c8b0 60%, #c8bca0 85%, #c0b498 100%);
+    radial-gradient(ellipse at 40% 8%, rgba(255,250,240,0.16), transparent 40%),
+    radial-gradient(ellipse at 30% 20%, rgba(255,250,240,0.07), transparent 50%),
+    radial-gradient(ellipse at 70% 90%, rgba(20,15,5,0.14), transparent 45%),
+    var(--body-base);
 }
 
 /* VU meter face gradient */
@@ -797,8 +1106,18 @@ input:focus-visible,
 
 /* Engraved text effect */
 .text-engraved {
-  color: rgba(20,15,5,0.4);
-  text-shadow: 0 1px 0 rgba(255,250,240,0.3);
+  color: var(--silk, rgba(20,15,5,0.4));
+  text-shadow: var(--silk-shadow, 0 1px 0 rgba(255,250,240,0.3));
+}
+
+/* Raised metal keys and plates carry their own dark engraving on every skin */
+.shadow-button-up,
+.shadow-button-down,
+.recorder-power-console,
+.tape-position-panel {
+  --silk: rgba(20,15,5,0.5);
+  --silk-shadow: 0 1px 0 rgba(255,250,240,0.3);
+  --tick: rgba(20,15,5,0.4);
 }
 
 /* Embossed text effect (light on dark) */
@@ -811,4 +1130,79 @@ input:focus-visible,
 .no-select {
   user-select: none;
   -webkit-user-select: none;
+}
+
+/* Small screens: overrides for the pieces defined above */
+@media (max-width: 760px) {
+  .recorder-badge small {
+    display: none;
+  }
+
+  .recorder-mode-row {
+    justify-content: space-between;
+    padding-inline: 14px;
+  }
+
+  .recorder-badge {
+    position: static;
+    transform: none;
+  }
+
+  .recorder-badge > span {
+    font-size: 18px;
+    letter-spacing: 0.16em;
+  }
+
+  .session-bar {
+    flex-wrap: wrap;
+    row-gap: 8px;
+  }
+
+  .skin-picker {
+    margin-left: 4px;
+  }
+}
+
+@media (max-width: 560px) {
+  .channel-strip {
+    width: 86px;
+    padding-inline: 4px;
+  }
+
+  .transport-row {
+    gap: 8px;
+    padding-inline: 4px;
+  }
+
+  .transport-row button {
+    max-width: 58px;
+  }
+}
+
+@media (max-width: 1120px) {
+  .recorder-badge small {
+    display: none;
+  }
+}
+
+/* A label that swaps text (Save / Saving...) without changing its button's width */
+.stable-label {
+  display: inline-grid;
+  justify-items: center;
+}
+
+.stable-label > span {
+  grid-area: 1 / 1;
+}
+
+.recorder-power-bar {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  border-top: 1px solid var(--divider);
 }

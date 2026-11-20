@@ -339,6 +339,9 @@ export function useAudioEngine(): UseAudioEngineReturn {
     })
     setIsRecording(false)
     setRecordingPreview([])
+    // Rewind so Play starts the take from the top
+    engineRef.current?.seekTo(0)
+    setCurrentTime(0)
   }, [])
 
   const stopRecording = useCallback(() => {
@@ -713,6 +716,10 @@ export function useAudioEngine(): UseAudioEngineReturn {
 
   // Auto-save after recording completes (debounced to avoid rapid saves)
   const autoSaveTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  // `save` gets a new identity every time the session list refreshes, which a save itself
+  // causes. Depending on it here made autosave re-trigger itself every two seconds, forever.
+  const saveRef = useRef(save)
+  saveRef.current = save
   useEffect(() => {
     if (import.meta.env.DEV && new URLSearchParams(window.location.search).has('demo')) return
 
@@ -722,13 +729,13 @@ export function useAudioEngine(): UseAudioEngineReturn {
 
     if (autoSaveTimeoutRef.current) clearTimeout(autoSaveTimeoutRef.current)
     autoSaveTimeoutRef.current = setTimeout(() => {
-      save()
+      saveRef.current()
     }, 2000)
 
     return () => {
       if (autoSaveTimeoutRef.current) clearTimeout(autoSaveTimeoutRef.current)
     }
-  }, [tracks, isRecording, save])
+  }, [tracks, isRecording])
 
   return {
     tracks,

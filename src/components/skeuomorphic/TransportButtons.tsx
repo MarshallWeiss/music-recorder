@@ -24,7 +24,8 @@ function TransportButton({
   ledColor,
   ledActive = false,
   ledPulse = false,
-  width = 54,
+  width = 60,
+  glow,
 }: {
   children: React.ReactNode
   onClick: () => void
@@ -36,11 +37,20 @@ function TransportButton({
   ledActive?: boolean
   ledPulse?: boolean
   width?: number
+  glow?: string
 }) {
   const isRecord = variant === 'record'
 
   return (
-    <div className="flex flex-col items-center gap-1.5">
+    <div className="relative flex flex-col items-center gap-1.5">
+      {/* Lamp light spilling onto the faceplate while the key is latched */}
+      {glow && active && (
+        <div
+          className="transport-glow absolute pointer-events-none"
+          style={{ background: `radial-gradient(ellipse at 50% 42%, ${glow}, transparent 68%)` }}
+          aria-hidden="true"
+        />
+      )}
       {ledColor && (
         <StatusLED active={ledActive} color={ledColor} pulse={ledPulse} size="sm" />
       )}
@@ -52,7 +62,7 @@ function TransportButton({
         }`}
         style={{
           width,
-          height: 44,
+          height: 48,
           borderRadius: 4,
           // 3D bevel: bright top edge, dark bottom edge
           background: isRecord
@@ -70,7 +80,7 @@ function TransportButton({
               inset 0 1px 0 rgba(255,250,240,0.15),
               inset 0 -1px 0 rgba(0,0,0,0.2)
             `,
-          transform: active ? 'translateY(2px)' : 'none',
+          transform: active ? 'translateY(3px)' : 'none',
         }}
         title={label}
       >
@@ -85,7 +95,7 @@ function TransportButton({
         {children}
       </button>
       {label && (
-        <span className="text-[8px] font-label uppercase tracking-wider text-engraved font-bold">
+        <span className="text-[12px] font-label uppercase tracking-wider text-engraved font-bold">
           {label}
         </span>
       )}
@@ -108,7 +118,7 @@ export default function TransportButtons({
 }: TransportButtonsProps) {
   const recActive = isRecording || isCountingIn
   return (
-    <div className="flex items-end gap-4 px-4 py-3">
+    <div className="transport-row flex items-end gap-4 px-4 py-3">
       {/* REC */}
       <TransportButton
         onClick={recActive ? onStopRecording : onStartRecording}
@@ -116,7 +126,8 @@ export default function TransportButtons({
         disabled={!hasArmedTrack}
         variant="record"
         label="Rec"
-        width={62}
+        width={70}
+        glow="rgba(255, 52, 40, 0.55)"
         ledColor={isCountingIn ? 'amber' : 'red'}
         ledActive={recActive}
         ledPulse={recActive}
@@ -147,6 +158,7 @@ export default function TransportButtons({
         active={isPlaying}
         disabled={!hasRecordedTracks}
         label="Play"
+        glow="rgba(80, 230, 130, 0.3)"
         ledColor="green"
         ledActive={isPlaying}
       >

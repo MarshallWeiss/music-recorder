@@ -1,0 +1,150 @@
+/* The museum wall label: plain, quiet, and out of the way until asked for */
+.museum-label {
+  width: min(560px, calc(100vw - 32px));
+  max-height: min(86dvh, 760px);
+  padding: 0;
+  border: none;
+  border-radius: 2px;
+  background: #faf9f5;
+  color: #262624;
+  box-shadow: 0 30px 80px rgba(0, 0, 0, 0.35), 0 2px 6px rgba(0, 0, 0, 0.25);
+  font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+  font-size: 15px;
+  line-height: 1.55;
+}
+
+.museum-label::backdrop {
+  background: rgba(20, 18, 14, 0.45);
+}
+
+.museum-label article {
+  padding: 30px 34px 26px;
+  overflow-y: auto;
+  max-height: inherit;
+}
+
+.museum-label header {
+  position: relative;
+  padding-right: 40px;
+  margin-bottom: 18px;
+}
+
+.museum-label h2 {
+  margin: 0;
+  font-size: 26px;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  line-height: 1.15;
+}
+
+.museum-byline {
+  margin: 5px 0 0;
+  color: rgba(38, 38, 36, 0.66);
+}
+
+.museum-close {
+  position: absolute;
+  top: -8px;
+  right: -10px;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  color: rgba(38, 38, 36, 0.6);
+  font-size: 24px;
+  line-height: 1;
+}
+
+.museum-close:hover {
+  background: rgba(0, 0, 0, 0.06);
+  color: #262624;
+}
+
+.museum-facts {
+  margin: 0 0 18px;
+  padding: 12px 0;
+  border-top: 1px solid rgba(0, 0, 0, 0.14);
+  border-bottom: 1px solid rgba(0, 0, 0, 0.14);
+  font-size: 13.5px;
+}
+
+.museum-facts div {
+  display: grid;
+  grid-template-columns: 132px 1fr;
+  gap: 12px;
+  padding: 2px 0;
+}
+
+.museum-facts dt {
+  color: rgba(38, 38, 36, 0.6);
+}
+
+.museum-facts dd {
+  margin: 0;
+}
+
+.museum-label p {
+  margin: 0 0 12px;
+}
+
+.museum-label h3 {
+  margin: 20px 0 6px;
+  font-size: 12.5px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: rgba(38, 38, 36, 0.62);
+}
+
+.museum-recordings {
+  margin: 0 0 12px;
+  padding: 0;
+  list-style: none;
+}
+
+.museum-recordings li {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 2px 16px;
+  padding: 6px 0;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.08);
+}
+
+.museum-recording-note {
+  color: rgba(38, 38, 36, 0.6);
+  font-size: 13.5px;
+}
+
+.museum-small {
+  margin-top: 16px;
+  font-size: 13px;
+  color: rgba(38, 38, 36, 0.66);
+}
+
+.museum-label a {
+  color: inherit;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+/* The button that opens it, in either machine's bar */
+.about-button {
+  padding: 6px 11px;
+  border: 1px solid rgba(0, 0, 0, 0.26);
+  border-radius: 4px;
+  background: #fff;
+  color: #2e2e2b;
+  font: inherit;
+}
+
+.session-bar .about-button {
+  padding: 5px 9px 4px;
+  border: none;
+  border-radius: 2px;
+  background: linear-gradient(180deg, #c0b8a8 0%, #a8a090 100%);
+  box-shadow: 0 3px 6px rgba(20, 15, 5, 0.4), inset 0 1px 0 rgba(255, 250, 240, 0.22);
+  color: rgba(20, 15, 5, 0.6);
+  font: 700 12px/1 'Barlow Condensed', 'Helvetica Neue', Helvetica, Arial, sans-serif;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}

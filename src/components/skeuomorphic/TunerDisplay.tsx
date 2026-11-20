@@ -34,7 +34,7 @@ export default function TunerDisplay({ tuner, tuning, onTuningClick, width = 120
     const ctx = canvas.getContext('2d')
     if (!ctx) return
 
-    const dpr = window.devicePixelRatio || 1
+    const dpr = Math.min(3, (window.devicePixelRatio || 1) * 1.5) // oversampled: the device is CSS-zoomed to fit the window
     canvas.width = width * dpr
     canvas.height = height * dpr
     ctx.scale(dpr, dpr)
@@ -114,7 +114,7 @@ export default function TunerDisplay({ tuner, tuning, onTuningClick, width = 120
       }
 
       // --- Flat/Sharp labels at arc edges ---
-      ctx.font = '9px "Helvetica Neue", sans-serif'
+      ctx.font = '10px "Helvetica Neue", sans-serif'
       ctx.textBaseline = 'middle'
       ctx.fillStyle = 'rgba(220, 210, 190, 0.3)'
       const leftAngle = ARC_START
@@ -157,7 +157,7 @@ export default function TunerDisplay({ tuner, tuning, onTuningClick, width = 120
       // --- Target string label ---
       if (closestString && detecting) {
         const stringNum = tuning.strings.length - closestString.stringIndex
-        ctx.font = '8px "Courier New", monospace'
+        ctx.font = '10px "Courier New", monospace'
         ctx.fillStyle = isInTune ? 'rgba(72, 187, 120, 0.7)' : 'rgba(220, 210, 190, 0.4)'
         ctx.fillText(`str ${stringNum} · ${closestString.stringNote}`, centerX, noteY + 14)
       }
@@ -173,7 +173,7 @@ export default function TunerDisplay({ tuner, tuning, onTuningClick, width = 120
 
       // --- Frequency + cents readout ---
       ctx.textAlign = 'center'
-      ctx.font = '8px "Courier New", monospace'
+      ctx.font = '10px "Courier New", monospace'
       ctx.fillStyle = detecting
         ? 'rgba(220, 210, 190, 0.45)'
         : 'rgba(220, 210, 190, 0.12)'
@@ -206,7 +206,7 @@ export default function TunerDisplay({ tuner, tuning, onTuningClick, width = 120
       </div>
       <button
         onClick={onTuningClick}
-        className="text-[9px] font-label uppercase tracking-wider text-engraved font-bold hover:text-hw-600 transition-colors cursor-pointer no-select flex items-center gap-0.5"
+        className="text-[12px] font-label uppercase tracking-wider text-engraved font-bold hover:text-hw-600 transition-colors cursor-pointer no-select flex items-center gap-0.5"
         title={`Tuning: ${tuning.name} — click to change`}
       >
         {tuning.shortName}

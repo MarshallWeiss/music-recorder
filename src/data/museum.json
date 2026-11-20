@@ -1,0 +1,57 @@
+{
+  "porta": {
+    "name": "Porta Four",
+    "byline": "This project's own design, after the four-track cassette recorders of 1979 onwards",
+    "facts": [
+      ["Type", "Four-track cassette recorder with a built-in mixer"],
+      ["Modelled on", "The TEAC 144 Portastudio (1979) and the machines that followed it"],
+      ["Tracks", "Four"]
+    ],
+    "about": [
+      "The Porta Four is not a real product. It is drawn after the cassette four-tracks that began with the TEAC 144 Portastudio, launched in September 1979 at $899.",
+      "Before the Portastudio, recording more than one part meant booking a studio or buying an expensive open-reel machine. It put four tracks and a mixer onto an ordinary cassette, in a box that sat on a desk."
+    ],
+    "significance": "Home recording as an everyday thing starts with this kind of machine. Its limits, four tracks and a lot of tape hiss, became a sound people chose on purpose.",
+    "recordingsHeading": "Recorded on machines like this",
+    "recordings": [
+      { "artist": "Bruce Springsteen", "title": "Nebraska", "year": 1982, "note": "Recorded at home on a TEAC 144" },
+      { "artist": "Ween", "title": "The Pod", "year": 1991, "note": "Tascam four-track" },
+      { "artist": "Guided by Voices", "title": "Bee Thousand", "year": 1994, "note": "Four-track cassette" },
+      { "artist": "Elliott Smith", "title": "Roman Candle", "year": 1994, "note": "Portastudio" },
+      { "artist": "Mac DeMarco", "title": "Rock and Roll Night Club", "year": 2012, "note": "Tascam 244" }
+    ],
+    "recordingsNote": "",
+    "reproduction": "",
+    "sources": [
+      { "label": "Wikipedia: Portastudio", "url": "https://en.wikipedia.org/wiki/Portastudio" },
+      { "label": "Mixdown: recordings made on the Portastudio", "url": "https://mixdownmag.com.au/features/the-10-best-recordings-on-the-iconic-tascam-portastudio/" },
+      { "label": "Tape Op: Cassette Corner", "url": "https://tapeop.com/articles/8/cassette-corner-8" }
+    ]
+  },
+  "braun-tg60": {
+    "name": "Braun TG 60",
+    "byline": "Dieter Rams, 1965",
+    "facts": [
+      ["Maker", "Braun AG, Frankfurt"],
+      ["Designer", "Dieter Rams"],
+      ["Made", "1965 to 1966"],
+      ["Price when new", "1,980 DM"],
+      ["Size", "420 × 280 × 110 mm, 19 kg"],
+      ["Tracks and speeds", "Two tracks in stereo; 9.5 and 19 cm/s"]
+    ],
+    "about": [
+      "Braun's first tape recorder. Rams designed it to sit beside the company's hi-fi units, or to hang on the wall in a row with a control unit and two flat speakers, so every module shares the same height and depth.",
+      "Where other recorders hid their mechanism, this one shows it: exposed reels, a head plate with its screws on view, and a pressure roller that swings in as the tape starts. The keys are relay switches that respond to the lightest touch. Inside are three motors and three separate heads, the layout of a studio machine in a home appliance."
+    ],
+    "significance": "It is a design landmark more than a recording one. It shows the Braun idea that a machine's function can be its appearance, and it is collected and exhibited as an object: the photographs this version was drawn from were taken at the Pinakothek der Moderne in Munich.",
+    "recordingsHeading": "Recorded on it",
+    "recordings": [],
+    "recordingsNote": "No well-known recording is documented as made on a TG 60. It was a home hi-fi machine, bought to tape radio broadcasts and records.",
+    "reproduction": "About this version: drawn from museum photographs. The reel is shortened to three minutes, the amount of speed wobble is borrowed from Braun's later TG 1000, and what the \"aus\" key does is a guess.",
+    "sources": [
+      { "label": "Design+Design: the Braun tape recorders", "url": "https://www.designundtext.com/de/2.1.61_braun-design-tonbandgeraete-rams-pbdd.php" },
+      { "label": "Design+Design: the TG 60", "url": "https://www.designundtext.com/en/2.1.24_braun-design-tg60-rams-pbdd.php" },
+      { "label": "Wikimedia Commons: photographs", "url": "https://commons.wikimedia.org/wiki/Category:Braun_reel_to_reel_tape_recorders" }
+    ]
+  }
+}

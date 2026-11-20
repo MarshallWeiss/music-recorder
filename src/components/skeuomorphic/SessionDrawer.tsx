@@ -1,4 +1,5 @@
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
+import { SKINS, SkinId } from '../../skins'
 
 interface SessionMeta {
   id: string
@@ -25,6 +26,10 @@ interface SessionDrawerProps {
   isSaving: boolean
   isExporting: boolean
   hasRecordedTracks: boolean
+  skin: SkinId
+  onSetSkin: (skin: SkinId) => void
+  machinePicker?: React.ReactNode
+  children?: React.ReactNode
 }
 
 function MiniCassette({
@@ -44,28 +49,28 @@ function MiniCassette({
         isCurrent ? 'ring-1 ring-hw-400' : ''
       }`}
       style={{
-        width: 110,
-        height: 72,
+        width: 150,
+        height: 96,
         background: 'linear-gradient(180deg, #444038 0%, #3a3632 30%, #302c28 100%)',
         flexShrink: 0,
       }}
       onClick={onLoad}
     >
       {/* Mini reels */}
-      <div className="flex justify-between px-2 mt-0.5">
-        <div className="w-4 h-4 rounded-full" style={{ background: '#1a1816', border: '1px solid #555' }} />
-        <div className="w-4 h-4 rounded-full" style={{ background: '#1a1816', border: '1px solid #555' }} />
+      <div className="flex justify-between px-4 mt-1">
+        <div className="w-5 h-5 rounded-full" style={{ background: '#1a1816', border: '1px solid #555' }} />
+        <div className="w-5 h-5 rounded-full" style={{ background: '#1a1816', border: '1px solid #555' }} />
       </div>
 
       {/* Label */}
       <div
-        className="mx-2 mt-1.5 rounded-sm px-1.5 py-0.5"
+        className="mx-1 mt-2 rounded-sm px-2 py-1"
         style={{ background: '#f0e8d0' }}
       >
-        <div className="text-[8px] font-mono text-hw-800 truncate leading-tight">
+        <div className="text-[10px] font-mono text-hw-800 truncate leading-tight">
           {session.name}
         </div>
-        <div className="text-[6px] text-hw-500 leading-tight">
+        <div className="text-[10px] text-hw-500 leading-tight">
           {new Date(session.updatedAt).toLocaleDateString()}
         </div>
       </div>
@@ -76,7 +81,7 @@ function MiniCassette({
           e.stopPropagation()
           if (confirm('Delete this session?')) onDelete()
         }}
-        className="absolute top-1 right-1 w-3.5 h-3.5 rounded-full flex items-center justify-center text-[7px] text-hw-500 hover:text-red-400 hover:bg-black/30 transition-colors"
+        className="absolute top-1 right-1 w-4 h-4 rounded-full flex items-center justify-center text-[11px] leading-none text-hw-500 hover:text-red-400 hover:bg-black/30 transition-colors"
         title="Delete"
       >
         ×
@@ -84,7 +89,7 @@ function MiniCassette({
 
       {/* Current indicator */}
       {isCurrent && (
-        <div className="absolute bottom-1 right-2 text-[6px] text-hw-400 uppercase tracking-wider font-bold">
+        <div className="absolute bottom-1 right-2 text-[10px] text-hw-400 uppercase tracking-wider font-bold">
           ▸
         </div>
       )}
@@ -104,17 +109,44 @@ export default function SessionDrawer({
   isSaving,
   isExporting,
   hasRecordedTracks,
+  skin,
+  onSetSkin,
+  machinePicker,
+  children,
 }: SessionDrawerProps) {
   const [open, setOpen] = useState(false)
   const [showExportMenu, setShowExportMenu] = useState(false)
+  const rootRef = useRef<HTMLDivElement>(null)
+
+  // Close the drawer and export menu on outside click or Escape
+  useEffect(() => {
+    if (!open && !showExportMenu) return
+    const close = () => {
+      setOpen(false)
+      setShowExportMenu(false)
+    }
+    const onPointerDown = (event: PointerEvent) => {
+      if (rootRef.current && !rootRef.current.contains(event.target as Node)) close()
+    }
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') close()
+    }
+    document.addEventListener('pointerdown', onPointerDown)
+    document.addEventListener('keydown', onKeyDown)
+    return () => {
+      document.removeEventListener('pointerdown', onPointerDown)
+      document.removeEventListener('keydown', onKeyDown)
+    }
+  }, [open, showExportMenu])
 
   return (
-    <div className="relative">
+    <div className="relative" ref={rootRef}>
       {/* Trigger button */}
-      <div className="flex items-center gap-2 px-3 py-1.5">
+      <div className="session-bar flex items-center gap-2 px-3 py-1.5">
         <button
+          aria-expanded={open}
           onClick={() => setOpen(!open)}
-          className={`px-3 py-1 rounded-sm text-[9px] font-label uppercase tracking-wider font-bold transition-all ${
+          className={`px-3 py-1 rounded-sm text-[12px] font-label uppercase tracking-wider font-bold transition-all ${
             open ? 'shadow-button-down' : 'shadow-button-up'
           }`}
           style={{
@@ -128,26 +160,52 @@ export default function SessionDrawer({
           </span>
         </button>
 
-        <div className="flex-1" />
+        {machinePicker}
+
+        {/* Finish picker: swap the recorder's skin */}
+        <div className="skin-picker" role="radiogroup" aria-label="Finish">
+          <span className="text-engraved">Finish</span>
+          {SKINS.map((option) => (
+            <button
+              key={option.id}
+              type="button"
+              role="radio"
+              aria-checked={skin === option.id}
+              aria-label={option.name}
+              title={option.name}
+              onClick={() => onSetSkin(option.id)}
+              className={`skin-swatch ${skin === option.id ? 'is-selected' : ''}`}
+              style={{ background: option.swatch }}
+            />
+          ))}
+        </div>
+
+        <div className="flex-1 flex justify-center min-w-0">{children}</div>
 
         {/* Action buttons */}
         <button
           onClick={onSave}
           disabled={isSaving}
-          className="px-2 py-0.5 rounded-sm text-[8px] font-label uppercase tracking-wider font-bold shadow-button-up hover:brightness-110 transition-all disabled:opacity-50"
+          className="px-2.5 py-1 rounded-sm text-[12px] font-label uppercase tracking-wider font-bold shadow-button-up hover:brightness-110 transition-all disabled:opacity-50"
           style={{ background: 'linear-gradient(180deg, #c0b8a8 0%, #a8a090 100%)' }}
         >
-          <span className="text-engraved">{isSaving ? 'Saving...' : 'Save'}</span>
+          <span className="stable-label text-engraved">
+            <span aria-hidden={isSaving} style={{ visibility: isSaving ? 'hidden' : 'visible' }}>Save</span>
+            <span aria-hidden={!isSaving} style={{ visibility: isSaving ? 'visible' : 'hidden' }}>Saving...</span>
+          </span>
         </button>
 
         <div className="relative">
           <button
             onClick={() => setShowExportMenu(!showExportMenu)}
             disabled={isExporting || !hasRecordedTracks}
-            className="px-2 py-0.5 rounded-sm text-[8px] font-label uppercase tracking-wider font-bold shadow-button-up hover:brightness-110 transition-all disabled:opacity-50"
+            className="px-2.5 py-1 rounded-sm text-[12px] font-label uppercase tracking-wider font-bold shadow-button-up hover:brightness-110 transition-all disabled:opacity-50"
             style={{ background: 'linear-gradient(180deg, #c0b8a8 0%, #a8a090 100%)' }}
           >
-            <span className="text-engraved">{isExporting ? 'Exporting...' : 'Export ▾'}</span>
+            <span className="stable-label text-engraved">
+              <span aria-hidden={isExporting} style={{ visibility: isExporting ? 'hidden' : 'visible' }}>Export ▾</span>
+              <span aria-hidden={!isExporting} style={{ visibility: isExporting ? 'visible' : 'hidden' }}>Exporting...</span>
+            </span>
           </button>
 
           {showExportMenu && !isExporting && (
@@ -162,7 +220,7 @@ export default function SessionDrawer({
                     setShowExportMenu(false)
                     onExport(fmt)
                   }}
-                  className="w-full text-left px-3 py-1.5 text-[9px] font-label font-bold uppercase tracking-wider hover:bg-hw-300/50 transition-colors"
+                  className="w-full text-left px-3 py-1.5 text-[12px] font-label font-bold uppercase tracking-wider hover:bg-hw-300/50 transition-colors"
                   style={{ color: '#4a4438' }}
                 >
                   {fmt.label}
@@ -174,7 +232,7 @@ export default function SessionDrawer({
 
         <button
           onClick={onNew}
-          className="px-2 py-0.5 rounded-sm text-[8px] font-label uppercase tracking-wider font-bold shadow-button-up hover:brightness-110 transition-all"
+          className="px-2.5 py-1 rounded-sm text-[12px] font-label uppercase tracking-wider font-bold shadow-button-up hover:brightness-110 transition-all"
           style={{ background: 'linear-gradient(180deg, #c0b8a8 0%, #a8a090 100%)' }}
         >
           <span className="text-engraved">New</span>
@@ -183,15 +241,9 @@ export default function SessionDrawer({
 
       {/* Drawer panel */}
       {open && (
-        <div
-          className="shadow-inset-groove rounded-sm mx-2 mb-2 p-2 overflow-x-auto"
-          style={{
-            background: 'linear-gradient(180deg, #1a1816 0%, #222018 100%)',
-            maxHeight: 120,
-          }}
-        >
+        <div className="tape-drawer-panel">
           {sessions.length === 0 ? (
-            <div className="text-[9px] text-hw-500 text-center py-4 font-label">
+            <div className="text-[11px] text-hw-400 text-center py-5 font-label">
               No saved sessions. Record something and it will auto-save.
             </div>
           ) : (

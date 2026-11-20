@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from 'react'
-import TapeCounter from './TapeCounter'
+import TapeView, { TapeLane } from './TapeView'
 
 interface CassetteDeckProps {
   isPlaying: boolean
@@ -9,9 +9,11 @@ interface CassetteDeckProps {
   loopDuration: number
   currentTime: number
   onSeekTo?: (time: number) => void
+  lanes?: TapeLane[]
+  recordingPreview?: { min: number; max: number }[]
 }
 
-function TapeHub({ spinning, size }: { spinning: boolean; size: number }) {
+function TapeHub({ spinning, size, pack }: { spinning: boolean; size: number; pack: number }) {
   const r = size / 2
   // 6-tooth drive hub shape (like real cassette spindle holes)
   const toothCount = 6
@@ -25,17 +27,19 @@ function TapeHub({ spinning, size }: { spinning: boolean; size: number }) {
     return `${i === 0 ? 'M' : 'L'}${x.toFixed(1)},${y.toFixed(1)}`
   }).join(' ') + 'Z'
 
-  return (
-    <g className={spinning ? 'animate-reel-spin' : ''} style={{ transformOrigin: `${r}px ${r}px` }}>
-      {/* Outer tape wound — visible concentric rings of magnetic tape */}
-      <circle cx={r} cy={r} r={size * 0.48} fill="none" stroke="rgba(80,40,20,0.2)" strokeWidth={size * 0.015} />
-      <circle cx={r} cy={r} r={size * 0.46} fill="none" stroke="rgba(60,30,15,0.25)" strokeWidth={size * 0.015} />
-      <circle cx={r} cy={r} r={size * 0.44} fill="none" stroke="rgba(70,35,18,0.2)" strokeWidth={size * 0.015} />
-      <circle cx={r} cy={r} r={size * 0.42} fill="none" stroke="rgba(55,28,12,0.25)" strokeWidth={size * 0.015} />
-      <circle cx={r} cy={r} r={size * 0.40} fill="none" stroke="rgba(65,32,16,0.2)" strokeWidth={size * 0.015} />
-      <circle cx={r} cy={r} r={size * 0.38} fill="none" stroke="rgba(50,25,10,0.25)" strokeWidth={size * 0.015} />
-      <circle cx={r} cy={r} r={size * 0.36} fill="none" stroke="rgba(60,30,15,0.2)" strokeWidth={size * 0.015} />
+  // Wound tape: radius grows from the bare hub to a full reel
+  const packR = size * (0.34 + 0.34 * Math.max(0, Math.min(1, pack)))
+  const rings = []
+  for (let ringR = size * 0.36; ringR < packR - 1; ringR += size * 0.035) rings.push(ringR)
 
+  return (
+    <>
+      {/* Tape pack does not need to spin: it is rotationally symmetric */}
+      <circle cx={r} cy={r} r={packR} fill="url(#packGradient)" stroke="rgba(0,0,0,0.5)" strokeWidth="0.8" />
+      {rings.map((ringR) => (
+        <circle key={ringR} cx={r} cy={r} r={ringR} fill="none" stroke="rgba(255,220,180,0.05)" strokeWidth="0.6" />
+      ))}
+    <g className={spinning ? 'animate-reel-spin' : ''} style={{ transformOrigin: `${r}px ${r}px` }}>
       {/* Hub flange (off-white plastic, bigger) */}
       <circle cx={r} cy={r} r={size * 0.32} fill="url(#hubGradient)" stroke="rgba(0,0,0,0.2)" strokeWidth="0.8" />
 
@@ -55,6 +59,7 @@ function TapeHub({ spinning, size }: { spinning: boolean; size: number }) {
       {/* Drive spindle hole — larger */}
       <path d={hubPath} fill="#1a1610" stroke="rgba(0,0,0,0.4)" strokeWidth="0.8" />
     </g>
+    </>
   )
 }
 
@@ -66,11 +71,15 @@ export default function CassetteDeck({
   loopDuration,
   currentTime,
   onSeekTo,
+  lanes,
+  recordingPreview,
 }: CassetteDeckProps) {
   const [editing, setEditing] = useState(false)
   const [editValue, setEditValue] = useState('')
   const inputRef = useRef<HTMLInputElement>(null)
   const spinning = isPlaying || isRecording
+  // Tape moves from the left (supply) reel to the right (take-up) reel as it plays
+  const tapeProgress = loopDuration > 0 ? Math.max(0, Math.min(1, currentTime / loopDuration)) : 0
 
   useEffect(() => {
     if (editing && inputRef.current) {
@@ -182,6 +191,13 @@ export default function CassetteDeck({
                   <stop offset="100%" stopColor="#c8c0b0" />
                 </radialGradient>
 
+                {/* Wound tape pack */}
+                <radialGradient id="packGradient" cx="50%" cy="50%">
+                  <stop offset="0%" stopColor="#2a140a" />
+                  <stop offset="70%" stopColor="#3a1c10" />
+                  <stop offset="100%" stopColor="#4a2616" />
+                </radialGradient>
+
                 {/* Tape ribbon gradient */}
                 <linearGradient id="tapeGradient" x1="0" y1="0" x2="0" y2="1">
                   <stop offset="0%" stopColor="#3a1c10" />
@@ -235,12 +251,12 @@ export default function CassetteDeck({
 
               {/* Left hub */}
               <g transform={`translate(${(W - windowSide * 2) * 0.22 - hubSize / 2}, ${windowH / 2 - hubSize / 2})`}>
-                <TapeHub spinning={spinning} size={hubSize} />
+                <TapeHub spinning={spinning} size={hubSize} pack={1 - tapeProgress} />
               </g>
 
               {/* Right hub */}
               <g transform={`translate(${(W - windowSide * 2) * 0.78 - hubSize / 2}, ${windowH / 2 - hubSize / 2})`}>
-                <TapeHub spinning={spinning} size={hubSize} />
+                <TapeHub spinning={spinning} size={hubSize} pack={tapeProgress} />
               </g>
             </svg>
 
@@ -411,10 +427,13 @@ export default function CassetteDeck({
           </div>
         </div>
       </div>
-      <TapeCounter
+      <TapeView
         currentTime={currentTime}
         loopDuration={loopDuration}
+        isRecording={isRecording}
         onSeekTo={onSeekTo}
+        lanes={lanes}
+        recordingPreview={recordingPreview}
       />
     </div>
   )

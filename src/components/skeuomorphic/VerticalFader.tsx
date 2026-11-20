@@ -4,13 +4,15 @@ interface VerticalFaderProps {
   value: number    // 0-1 (bottom to top)
   onChange: (value: number) => void
   height?: number  // total fader height in px
+  color?: string   // track colour shown as an inlay on the cap
+  label?: string
 }
 
-const THUMB_HEIGHT = 28
-const THUMB_WIDTH = 32
-const SLOT_WIDTH = 8
+const THUMB_HEIGHT = 38
+const THUMB_WIDTH = 42
+const SLOT_WIDTH = 9
 
-export default function VerticalFader({ value, onChange, height = 140 }: VerticalFaderProps) {
+export default function VerticalFader({ value, onChange, height = 140, color, label }: VerticalFaderProps) {
   const slotRef = useRef<HTMLDivElement>(null)
   const dragRef = useRef<{ startY: number; startValue: number } | null>(null)
   const trackRange = height - THUMB_HEIGHT
@@ -54,6 +56,18 @@ export default function VerticalFader({ value, onChange, height = 140 }: Vertica
       className="relative cursor-pointer no-select"
       style={{ width: THUMB_WIDTH + 12, height }}
       onClick={handleSlotClick}
+      role="slider"
+      tabIndex={0}
+      aria-label={label ?? 'Volume'}
+      aria-orientation="vertical"
+      aria-valuemin={0}
+      aria-valuemax={100}
+      aria-valuenow={Math.round(value * 100)}
+      onKeyDown={(event) => {
+        const step = event.shiftKey ? 0.1 : 0.02
+        if (event.key === 'ArrowUp' || event.key === 'ArrowRight') { event.preventDefault(); onChange(Math.min(1, value + step)) }
+        if (event.key === 'ArrowDown' || event.key === 'ArrowLeft') { event.preventDefault(); onChange(Math.max(0, value - step)) }
+      }}
     >
       {/* Fader slot groove */}
       <div
@@ -83,35 +97,23 @@ export default function VerticalFader({ value, onChange, height = 140 }: Vertica
         }}
       />
 
-      {/* Scale marks — both sides */}
-      {[0, 0.25, 0.5, 0.75, 1].map((mark) => (
-        <div key={mark}>
-          {/* Right marks */}
-          <div
-            className="absolute"
-            style={{
-              width: mark === 0.75 ? 10 : 6,
-              height: 1,
-              background: mark === 0.75 ? 'rgba(20,15,5,0.5)' : 'rgba(20,15,5,0.3)',
-              boxShadow: '0 1px 0 rgba(255,250,240,0.15)',
-              right: 0,
-              bottom: 4 + THUMB_HEIGHT / 2 + mark * trackRange - 0.5,
-            }}
-          />
-          {/* Left marks */}
-          <div
-            className="absolute"
-            style={{
-              width: mark === 0.75 ? 10 : 6,
-              height: 1,
-              background: mark === 0.75 ? 'rgba(20,15,5,0.5)' : 'rgba(20,15,5,0.3)',
-              boxShadow: '0 1px 0 rgba(255,250,240,0.15)',
-              left: 0,
-              bottom: 4 + THUMB_HEIGHT / 2 + mark * trackRange - 0.5,
-            }}
-          />
-        </div>
-      ))}
+      {/* Scale marks — both sides, unity gain at the top */}
+      {[0, 0.125, 0.25, 0.375, 0.5, 0.625, 0.75, 0.875, 1].map((mark) => {
+        const major = mark === 0 || mark === 0.5 || mark === 1
+        const markStyle = {
+          width: major ? 9 : 5,
+          height: 1,
+          background: 'var(--tick)',
+          opacity: major ? 1 : 0.6,
+          bottom: THUMB_HEIGHT / 2 + mark * trackRange - 0.5,
+        }
+        return (
+          <div key={mark}>
+            <div className="absolute" style={{ ...markStyle, right: 0 }} />
+            <div className="absolute" style={{ ...markStyle, left: 0 }} />
+          </div>
+        )
+      })}
 
       {/* Fader thumb — chrome-like */}
       <div
@@ -148,8 +150,8 @@ export default function VerticalFader({ value, onChange, height = 140 }: Vertica
       >
         {/* Grip ridges */}
         <div className="absolute inset-x-1" style={{
-          top: 5,
-          height: THUMB_HEIGHT - 10,
+          top: 4,
+          height: THUMB_HEIGHT - 8,
           background: `
             repeating-linear-gradient(
               0deg,
@@ -160,12 +162,12 @@ export default function VerticalFader({ value, onChange, height = 140 }: Vertica
             )
           `,
         }} />
-        {/* Center indicator line */}
-        <div className="absolute left-1 right-1" style={{
-          top: THUMB_HEIGHT / 2 - 0.5,
-          height: 1,
-          background: 'rgba(255,250,240,0.3)',
-          boxShadow: '0 1px 0 rgba(20,15,5,0.2)',
+        {/* Track-colour inlay across the centre of the cap */}
+        <div className="absolute left-0 right-0" style={{
+          top: THUMB_HEIGHT / 2 - 2.5,
+          height: 5,
+          background: color ?? 'rgba(255,250,240,0.3)',
+          boxShadow: 'inset 0 1px 1px rgba(0,0,0,0.35), 0 1px 0 rgba(255,250,240,0.25)',
         }} />
       </div>
     </div>

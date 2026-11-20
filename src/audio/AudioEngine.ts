@@ -23,6 +23,7 @@ export class AudioEngine {
   private playbackGains: GainNode[] = []
   private playbackPans: StereoPannerNode[] = []
   private analysers: AnalyserNode[] = []
+  private mixAnalyser: AnalyserNode | null = null
   private inputAnalyser: AnalyserNode | null = null
   private tunerAnalyser: AnalyserNode | null = null
   private isCurrentlyPlaying = false
@@ -311,6 +312,7 @@ export class AudioEngine {
       gain.connect(pan)
       pan.connect(analyser)
       analyser.connect(this.context.destination)
+      pan.connect(this.getMixAnalyser()!)
 
       // All tracks share the same tape — use consistent loop duration for offset
       const bufferPos = this.loopDuration > 0
@@ -543,6 +545,19 @@ export class AudioEngine {
   }
 
   /**
+   * Analyser tapping the summed playback of all tracks (for the MIX meter).
+   * It is a side tap: audio still reaches the destination directly.
+   */
+  getMixAnalyser(): AnalyserNode | null {
+    if (!this.context) return null
+    if (!this.mixAnalyser || this.mixAnalyser.context !== this.context) {
+      this.mixAnalyser = this.context.createAnalyser()
+      this.mixAnalyser.fftSize = 256
+    }
+    return this.mixAnalyser
+  }
+
+  /**
    * Get input analyser node (for VU meter during recording).
    */
   getInputAnalyser(): AnalyserNode | null {
@@ -710,7 +725,8 @@ export class AudioEngine {
       : null
 
     // Figure out how many samples the current bin has already consumed
-    const totalBeforeChunk = this.recordingTotalSamples - chunk.length
+    // Called before recordingTotalSamples is advanced, so it is already the chunk's start
+    const totalBeforeChunk = this.recordingTotalSamples
     let binStartSample = this.recordingPreview.length > 0
       ? (this.recordingPreview.length - 1) * samplesPerBin
       : 0
@@ -792,6 +808,7 @@ export class AudioEngine {
       source.connect(gain)
       gain.connect(pan)
       pan.connect(this.context.destination)
+      pan.connect(this.getMixAnalyser()!)
 
       // Use consistent loop duration for offset calculation
       const bufferPos = this.loopDuration > 0

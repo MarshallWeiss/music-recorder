@@ -7,11 +7,12 @@ interface RotaryKnobProps {
   size?: 'sm' | 'md' | 'lg'
   detent?: boolean      // center detent (snap to 0.5)
   ticks?: number        // number of tick marks around edge
+  dark?: boolean        // dark phenolic finish instead of brushed metal
 }
 
 const SIZE_MAP = {
-  sm: { outer: 34, knob: 28, tickLen: 3, labelSize: 'text-[8px]' },
-  md: { outer: 50, knob: 40, tickLen: 4, labelSize: 'text-[9px]' },
+  sm: { outer: 34, knob: 28, tickLen: 3, labelSize: 'text-[10px]' },
+  md: { outer: 54, knob: 42, tickLen: 5, labelSize: 'text-[10px]' },
   lg: { outer: 64, knob: 52, tickLen: 5, labelSize: 'text-[10px]' },
 }
 
@@ -27,6 +28,7 @@ export default function RotaryKnob({
   size = 'md',
   detent = false,
   ticks = 11,
+  dark,
 }: RotaryKnobProps) {
   const dragRef = useRef<{ startY: number; startValue: number } | null>(null)
   const s = SIZE_MAP[size]
@@ -78,13 +80,13 @@ export default function RotaryKnob({
         y1={cy + innerR * Math.sin(rad)}
         x2={cx + outerR * Math.cos(rad)}
         y2={cy + outerR * Math.sin(rad)}
-        stroke="rgba(20,15,5,0.45)"
+        style={{ stroke: 'var(--tick, rgba(20,15,5,0.45))' }}
         strokeWidth="1"
       />
     )
   }
 
-  const isDark = size === 'sm'
+  const isDark = dark ?? size === 'sm'
   const knobR = s.knob / 2
 
   return (

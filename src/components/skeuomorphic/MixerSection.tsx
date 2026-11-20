@@ -1,11 +1,9 @@
 import { Track } from '../../types'
+import { TRACK_COLORS } from '../../skins'
 import ChannelStrip from './ChannelStrip'
 
 interface MixerSectionProps {
   tracks: Track[]
-  currentTime: number
-  loopDuration: number
-  recordingPreview: { min: number; max: number }[]
   onArmTrack: (trackId: number) => void
   onSetVolume: (trackId: number, volume: number) => void
   onSetPan: (trackId: number, pan: number) => void
@@ -17,9 +15,6 @@ interface MixerSectionProps {
 
 export default function MixerSection({
   tracks,
-  currentTime,
-  loopDuration,
-  recordingPreview,
   onArmTrack,
   onSetVolume,
   onSetPan,
@@ -30,13 +25,13 @@ export default function MixerSection({
 }: MixerSectionProps) {
   return (
     <div className="recorder-mixer-scroll flex flex-col flex-shrink-0">
-      {/* Channel strips container */}
-      <div className="recorder-mixer-bank flex flex-1 rounded"
+      {/* Channel strips sit in a shallow recess in the faceplate */}
+      <div className="recorder-mixer-bank flex flex-1 rounded-md"
         style={{
-          background: 'linear-gradient(180deg, #dcd0b8 0%, #d0c4ac 30%, #c8bca4 70%, #c0b49c 100%)',
+          background: 'var(--mixer-bg)',
           boxShadow: `
             inset 0 3px 8px rgba(20,15,5,0.3),
-            inset 0 -2px 4px rgba(255,250,240,0.08),
+            inset 0 -2px 4px rgba(255,250,240,0.06),
             inset 2px 0 4px rgba(20,15,5,0.1),
             inset -2px 0 4px rgba(20,15,5,0.1),
             0 1px 0 rgba(255,250,240,0.1)
@@ -44,12 +39,10 @@ export default function MixerSection({
         }}
       >
         {tracks.map((track, i) => (
-          <div key={track.id} className={`${i > 0 ? 'border-l border-hw-400/20' : ''}`}>
+          <div key={track.id} style={i > 0 ? { borderLeft: '1px solid var(--divider)' } : undefined}>
             <ChannelStrip
               track={track}
-              currentTime={currentTime}
-              loopDuration={loopDuration}
-              recordingPreview={recordingPreview}
+              color={TRACK_COLORS[i % TRACK_COLORS.length]}
               onArmTrack={() => onArmTrack(track.id)}
               onSetVolume={(v) => onSetVolume(track.id, v)}
               onSetPan={(p) => onSetPan(track.id, p)}

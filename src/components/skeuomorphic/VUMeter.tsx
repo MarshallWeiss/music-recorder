@@ -28,7 +28,7 @@ export default function VUMeter({ analyser, label = 'VU', width = 140, height = 
     if (!ctx) return
 
     // High DPI
-    const dpr = window.devicePixelRatio || 1
+    const dpr = Math.min(3, (window.devicePixelRatio || 1) * 1.5) // oversampled: the device is CSS-zoomed to fit the window
     canvas.width = width * dpr
     canvas.height = height * dpr
     ctx.scale(dpr, dpr)
@@ -100,7 +100,7 @@ export default function VUMeter({ analyser, label = 'VU', width = 140, height = 
         { db: 3,   label: '+3' },
       ]
 
-      ctx.font = '7px Helvetica Neue, sans-serif'
+      ctx.font = '9px "Barlow Condensed", Helvetica Neue, sans-serif'
       ctx.textAlign = 'center'
 
       // Helper: map dB to normalized 0-1 position on the arc
@@ -181,7 +181,7 @@ export default function VUMeter({ analyser, label = 'VU', width = 140, height = 
       ctx.fill()
 
       // VU label
-      ctx.font = 'bold 11px Helvetica Neue, sans-serif'
+      ctx.font = 'bold 11px "Barlow Condensed", Helvetica Neue, sans-serif'
       ctx.fillStyle = '#2a2218'
       ctx.textAlign = 'center'
       ctx.fillText('VU', width / 2, height * 0.52)
@@ -210,7 +210,7 @@ export default function VUMeter({ analyser, label = 'VU', width = 140, height = 
           className="rounded"
         />
       </div>
-      <span className="text-[9px] font-label uppercase tracking-wider text-engraved font-bold">
+      <span className="text-[12px] font-label uppercase tracking-wider text-engraved font-bold">
         {label}
       </span>
     </div>

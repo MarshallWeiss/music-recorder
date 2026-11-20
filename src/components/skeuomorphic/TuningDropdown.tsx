@@ -69,7 +69,7 @@ export default function TuningDropdown({
         return (
           <div key={group.key}>
             <div
-              className="px-3 pt-2 pb-0.5 text-[8px] font-label uppercase tracking-wider font-bold"
+              className="px-3 pt-2 pb-0.5 text-[12px] font-label uppercase tracking-wider font-bold"
               style={{ color: '#8a7a60' }}
             >
               {group.label}
@@ -78,7 +78,7 @@ export default function TuningDropdown({
               <div key={tuning.name} className="flex items-center group">
                 <button
                   onClick={() => onSelect(tuning)}
-                  className={`flex-1 text-left px-3 py-1 text-[10px] font-label hover:bg-hw-300/50 transition-colors ${
+                  className={`flex-1 text-left px-3 py-1 text-[12px] font-label hover:bg-hw-300/50 transition-colors ${
                     tuning.name === currentTuning.name ? 'bg-hw-400/30 font-bold' : ''
                   }`}
                   style={{ color: '#4a3a28' }}
@@ -109,7 +109,7 @@ export default function TuningDropdown({
         {!editing ? (
           <button
             onClick={() => setEditing(true)}
-            className="w-full text-left px-3 py-1 text-[10px] font-label hover:bg-hw-300/50 transition-colors"
+            className="w-full text-left px-3 py-1 text-[12px] font-label hover:bg-hw-300/50 transition-colors"
             style={{ color: '#6a5a48' }}
           >
             + Custom Tuning
@@ -130,14 +130,14 @@ export default function TuningDropdown({
               autoFocus
             />
             {nameCollision && (
-              <div className="text-[8px] font-label" style={{ color: '#c53030' }}>
+              <div className="text-[12px] font-label" style={{ color: '#c53030' }}>
                 Name conflicts with a built-in tuning
               </div>
             )}
             <div className="grid grid-cols-3 gap-1">
               {[5, 4, 3, 2, 1, 0].map(i => (
                 <div key={i} className="flex items-center gap-0.5">
-                  <span className="text-[8px] font-label font-bold" style={{ color: '#8a7a60', width: 8 }}>
+                  <span className="text-[12px] font-label font-bold" style={{ color: '#8a7a60', width: 8 }}>
                     {6 - i}
                   </span>
                   <input
@@ -159,7 +159,7 @@ export default function TuningDropdown({
               <button
                 onClick={handleSave}
                 disabled={!allValid || nameCollision}
-                className="flex-1 text-[9px] font-label font-bold py-1 rounded transition-all"
+                className="flex-1 text-[12px] font-label font-bold py-1 rounded transition-all"
                 style={{
                   background: allValid && !nameCollision
                     ? 'linear-gradient(180deg, #6a8a5a 0%, #5a7a4a 100%)'
@@ -176,7 +176,7 @@ export default function TuningDropdown({
                   setCustomName('')
                   setCustomStrings([...DEFAULT_STRINGS])
                 }}
-                className="flex-1 text-[9px] font-label py-1 rounded transition-all hover:bg-hw-300/50"
+                className="flex-1 text-[12px] font-label py-1 rounded transition-all hover:bg-hw-300/50"
                 style={{ color: '#6a5a48' }}
               >
                 Cancel

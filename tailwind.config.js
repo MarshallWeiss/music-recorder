@@ -41,7 +41,7 @@ export default {
       },
       fontFamily: {
         mono: ['"Courier New"', 'Courier', 'monospace'],
-        label: ['"Helvetica Neue"', 'Helvetica', 'Arial', 'sans-serif'],
+        label: ['"Barlow Condensed"', '"Helvetica Neue"', 'Helvetica', 'Arial', 'sans-serif'],
       },
       boxShadow: {
         'inset-groove': 'inset 0 2px 4px rgba(20,15,5,0.45), inset 0 -1px 2px rgba(255,250,240,0.1)',

@@ -21,20 +21,31 @@ const STATE_LABELS: Record<string, string> = {
   stopped: 'STOPPED',
 }
 
+const TAP_HINT: Record<string, string> = {
+  empty: 'Record',
+  recording: 'Close loop and play',
+  playing: 'Overdub',
+  overdubbing: 'Finish overdub',
+  stopped: 'Play',
+}
+
 export default function StompButton({ looper, onClick }: StompButtonProps) {
   const led = LED_COLORS[looper.ledColor]
   const isFlashing = looper.ledColor === 'green-flash'
   const isRecording = looper.state === 'recording' || looper.state === 'overdubbing'
 
   return (
-    <div className="flex flex-col items-center gap-3">
-      {/* State label */}
-      <div className="text-[11px] font-mono font-bold tracking-wider uppercase"
-        style={{ color: looper.state === 'empty' ? 'rgba(180,170,150,0.4)' : 'rgba(220,210,190,0.8)' }}
-      >
-        {STATE_LABELS[looper.state]}
+    <div className="flex flex-col items-center gap-5">
+      {/* State readout */}
+      <div className="looper-readout" role="status" aria-live="polite">
+        <span
+          className={`looper-readout-lamp ${isFlashing ? 'animate-led-pulse' : ''}`}
+          style={looper.ledColor === 'off' ? undefined : { background: led.ring, boxShadow: led.glow }}
+          aria-hidden="true"
+        />
+        <span>{STATE_LABELS[looper.state]}</span>
         {looper.layerCount > 0 && (
-          <span className="ml-2 text-[9px]" style={{ color: 'rgba(180,170,150,0.5)' }}>
+          <span className="looper-readout-layers">
             {looper.layerCount} {looper.layerCount === 1 ? 'layer' : 'layers'}
           </span>
         )}
@@ -55,8 +66,8 @@ export default function StompButton({ looper, onClick }: StompButtonProps) {
         aria-label={`Looper: ${STATE_LABELS[looper.state]}`}
         title="Looper footswitch"
         style={{
-          width: 100,
-          height: 100,
+          width: 136,
+          height: 136,
           background: 'radial-gradient(circle at 40% 35%, #686058, #484038 50%, #383430 100%)',
           boxShadow: `
             0 4px 12px rgba(0,0,0,0.5),
@@ -98,26 +109,12 @@ export default function StompButton({ looper, onClick }: StompButtonProps) {
         )}
       </button>
 
-      {/* Undo indicator */}
-      {looper.canUndo && looper.state === 'playing' && (
-        <div className="text-[8px] font-mono tracking-wider"
-          style={{ color: 'rgba(180,170,150,0.5)' }}
-        >
-          HOLD: {looper.undoIsRedo ? 'REDO' : 'UNDO'}
-        </div>
-      )}
-
-      {/* Keyboard hint */}
-      <div className="flex items-center gap-1.5">
-        <div className="px-2 py-0.5 rounded-sm text-[9px] font-mono font-bold"
-          style={{
-            background: 'rgba(0,0,0,0.2)',
-            color: 'rgba(180,170,150,0.5)',
-            border: '1px solid rgba(180,170,150,0.15)',
-          }}
-        >
-          SPACE
-        </div>
+      {/* Gesture legend: the footswitch is the Space bar */}
+      <div className="looper-gestures" aria-label="Looper gestures (Space bar or footswitch)">
+        <kbd>Tap</kbd><span>{TAP_HINT[looper.state]}</span>
+        <kbd>Double-tap</kbd><span>Stop</span>
+        <kbd>Hold</kbd><span>{looper.undoIsRedo ? 'Redo last layer' : 'Undo last layer'}</span>
+        <kbd>Double-tap + hold</kbd><span>Clear loop</span>
       </div>
     </div>
   )

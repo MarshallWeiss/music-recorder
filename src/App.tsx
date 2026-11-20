@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react'
+import { useState, useCallback, useEffect } from 'react'
 import { useAudioEngine } from './hooks/useAudioEngine'
 import { useLooper } from './hooks/useLooper'
 import { useRecorderShortcuts } from './hooks/useRecorderShortcuts'
@@ -10,12 +10,52 @@ import TransportButtons from './components/skeuomorphic/TransportButtons'
 import LooperView from './components/skeuomorphic/LooperView'
 import SessionDrawer from './components/skeuomorphic/SessionDrawer'
 import ShortcutLegend from './components/skeuomorphic/ShortcutLegend'
+import { loadSkin, saveSkin, SkinId, TRACK_COLORS } from './skins'
+
+// Natural size of the desktop device (cream body + two wood cheeks), before fitting
+const DEVICE_WIDTH = 1290 + 2 * 56
+const DEVICE_HEIGHT = 880
+
+/**
+ * On desktop the recorder is one fixed-proportion object, zoomed to fit the window.
+ * Below the desktop breakpoint the responsive stacked layout takes over (returns null).
+ */
+function useFitScale() {
+  const [scale, setScale] = useState<number | null>(null)
+
+  useEffect(() => {
+    const update = () => {
+      // On phones a fixed-width device would itself widen the layout viewport and
+      // lock the desktop layout in, so never trust a width beyond the screen's own
+      const vw = Math.min(window.innerWidth, window.screen?.width || window.innerWidth)
+      const vh = window.innerHeight
+      if (vw <= 1120) {
+        setScale(null)
+        return
+      }
+      const padding = 2 * Math.min(16, vw * 0.012)
+      const fit = Math.min((vw - padding) / DEVICE_WIDTH, (vh - padding) / DEVICE_HEIGHT)
+      setScale(Math.max(0.75, Math.min(1.6, fit)))
+    }
+    update()
+    window.addEventListener('resize', update)
+    return () => window.removeEventListener('resize', update)
+  }, [])
+
+  return scale
+}
 
 function StatusDot() {
   return <span className="recorder-error-dot" aria-hidden="true" />
 }
 
-export default function App() {
+interface AppProps {
+  /** Switches between recorders; shown in the bottom bar. */
+  machinePicker?: React.ReactNode
+}
+
+/** The Porta Four: the original 4-track cassette recorder. */
+export default function App({ machinePicker }: AppProps = {}) {
   const {
     tracks,
     devices,
@@ -93,6 +133,27 @@ export default function App() {
     setMode(nextMode)
   }, [mode, isRecording, isPlaying, stopRecording, stop])
 
+  const [skin, setSkinState] = useState<SkinId>(loadSkin)
+  const setSkin = useCallback((next: SkinId) => {
+    setSkinState(next)
+    saveSkin(next)
+  }, [])
+
+  const tapeLanes = tracks.map((track, index) => ({
+    id: track.id,
+    name: track.name,
+    color: TRACK_COLORS[index % TRACK_COLORS.length],
+    buffer: track.audioBuffer,
+    muted: track.muted,
+    armed: track.isArmed,
+    recording: track.isRecording,
+  }))
+
+  const fitScale = useFitScale()
+  const chassisStyle: React.CSSProperties | undefined = fitScale === null
+    ? undefined
+    : { zoom: fitScale, flex: 'none', width: DEVICE_WIDTH, height: DEVICE_HEIGHT, minHeight: 0 }
+
   const armedTrack = tracks.find(t => t.isArmed)
   const hasRecordedTracks = tracks.some(t => t.audioBuffer)
 
@@ -112,8 +173,8 @@ export default function App() {
   // Initialization screen
   if (!isInitialized) {
     return (
-      <div className="recorder-shell flex" style={{ background: '#1a1612' }}>
-        <div className="recorder-chassis flex flex-1 overflow-hidden">
+      <div className="recorder-shell flex items-center" data-skin={skin}>
+        <div className="recorder-chassis flex flex-1 overflow-hidden" style={chassisStyle}>
           <WoodPanel side="left" />
           <div className="texture-body recorder-power flex-1 flex items-center justify-center relative">
             <div className="recorder-power-console">
@@ -125,18 +186,18 @@ export default function App() {
               <button
                 onClick={initialize}
                 disabled={isInitializing}
-                className={`recorder-power-button w-16 h-16 rounded-full shadow-knob transition-all flex items-center justify-center ${isInitializing ? 'is-starting' : ''}`}
+                className={`recorder-power-button w-20 h-20 rounded-full shadow-knob transition-all flex items-center justify-center ${isInitializing ? 'is-starting' : ''}`}
                 style={{
                   background: 'radial-gradient(circle at 38% 35%, #c0b8a8, #807870 60%, #686058 100%)',
                 }}
                 title={initializationError ? 'Try audio input again' : 'Power on'}
               >
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="rgba(0,0,0,0.4)" strokeWidth="2.5" strokeLinecap="round">
+                <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="rgba(0,0,0,0.4)" strokeWidth="2.5" strokeLinecap="round">
                   <path d="M12 2v6" />
                   <path d="M18.4 6.6a9 9 0 1 1-12.8 0" />
                 </svg>
               </button>
-              <span className="recorder-power-label text-[10px] font-label uppercase tracking-[0.2em] text-engraved font-bold">
+              <span className="recorder-power-label text-[11px] font-label uppercase tracking-[0.2em] text-engraved font-bold">
                 {isInitializing ? 'Starting' : initializationError ? 'Try again' : 'Power'}
               </span>
 
@@ -147,6 +208,8 @@ export default function App() {
                 </div>
               )}
             </div>
+            {/* The machine switch and About are reachable before powering on */}
+            <div className="recorder-power-bar session-bar">{machinePicker}</div>
           </div>
           <WoodPanel side="right" />
         </div>
@@ -155,13 +218,13 @@ export default function App() {
   }
 
   return (
-    <div className="recorder-shell flex" style={{ background: '#1a1612' }}>
-      <div className="recorder-chassis flex flex-1 overflow-hidden">
+    <div className="recorder-shell flex items-center" data-skin={skin}>
+      <div className="recorder-chassis flex flex-1 overflow-hidden" style={chassisStyle}>
         {/* Left wood panel */}
         <WoodPanel side="left" />
 
         {/* Main device body */}
-        <div className="texture-body recorder-main flex flex-col flex-1 overflow-y-auto">
+        <div className="texture-body recorder-main is-powered flex flex-col flex-1 overflow-y-auto">
           {/* Top: Brushed metal panel with VU meters + knobs */}
           <MetalPanel
             engine={engine}
@@ -185,43 +248,24 @@ export default function App() {
             onRetryInput={initialize}
           />
 
-          {/* Mode toggle — recessed toggle strip */}
-          <div className="flex items-center justify-center py-2" style={{
-            borderBottom: '1px solid rgba(20,15,5,0.06)',
-          }}>
-            <div className="flex rounded-sm overflow-hidden" style={{
-              boxShadow: 'inset 0 2px 4px rgba(20,15,5,0.25), inset 0 -1px 0 rgba(255,250,240,0.1), 0 1px 0 rgba(255,250,240,0.08)',
-              background: 'linear-gradient(180deg, #c4bca8 0%, #bab2a0 100%)',
-            }}>
+          {/* Badge + mode switch */}
+          <div className="recorder-mode-row">
+            <div className="recorder-badge">
+              <span>PORTA FOUR</span>
+              <small>Browser multitrack recorder</small>
+            </div>
+            <div className="recorder-mode-switch">
               <button
                 onClick={() => switchMode('multitrack')}
                 aria-pressed={!isLooperMode}
-                className="px-4 py-1.5 text-[9px] font-label uppercase tracking-wider font-bold transition-all no-select"
-                style={{
-                  background: !isLooperMode
-                    ? 'linear-gradient(180deg, #506880 0%, #3a5a7a 40%, #2a4a6a 100%)'
-                    : 'transparent',
-                  color: !isLooperMode ? 'rgba(200,220,240,0.95)' : 'rgba(60,50,40,0.45)',
-                  boxShadow: !isLooperMode
-                    ? 'inset 0 2px 4px rgba(0,0,0,0.3), inset 0 -1px 0 rgba(255,250,240,0.06)'
-                    : 'none',
-                }}
+                className="no-select"
               >
                 4-Track
               </button>
               <button
                 onClick={() => switchMode('looper')}
                 aria-pressed={isLooperMode}
-                className="px-4 py-1.5 text-[9px] font-label uppercase tracking-wider font-bold transition-all no-select"
-                style={{
-                  background: isLooperMode
-                    ? 'linear-gradient(180deg, #506880 0%, #3a5a7a 40%, #2a4a6a 100%)'
-                    : 'transparent',
-                  color: isLooperMode ? 'rgba(200,220,240,0.95)' : 'rgba(60,50,40,0.45)',
-                  boxShadow: isLooperMode
-                    ? 'inset 0 2px 4px rgba(0,0,0,0.3), inset 0 -1px 0 rgba(255,250,240,0.06)'
-                    : 'none',
-                }}
+                className="no-select"
               >
                 Looper
               </button>
@@ -229,7 +273,7 @@ export default function App() {
           </div>
 
           {/* Middle: Cassette+Transport (left) | Mixer (right) OR Looper */}
-          <div className={`recorder-work-area flex flex-1 px-6 py-4 gap-8 ${isLooperMode ? 'recorder-work-area--looper flex-col items-center justify-center' : 'items-start justify-center'}`}>
+          <div className={`recorder-work-area flex flex-1 px-6 py-4 gap-10 ${isLooperMode ? 'recorder-work-area--looper items-center justify-center' : 'items-start justify-center'}`}>
             {isLooperMode ? (
               <>
                 <CassetteDeck
@@ -257,6 +301,8 @@ export default function App() {
                     loopDuration={loopDuration}
                     currentTime={currentTime}
                     onSeekTo={seekTo}
+                    lanes={tapeLanes}
+                    recordingPreview={recordingPreview}
                   />
                   <TransportButtons
                     isRecording={isRecording}
@@ -271,15 +317,11 @@ export default function App() {
                     onStop={stop}
                     onSeekTo={seekTo}
                   />
-                  <ShortcutLegend />
                 </div>
 
                 {/* Right column: Mixer */}
                 <MixerSection
                   tracks={tracks}
-                  currentTime={currentTime}
-                  loopDuration={loopDuration}
-                  recordingPreview={recordingPreview}
                   onArmTrack={armTrack}
                   onSetVolume={setVolume}
                   onSetPan={setPan}
@@ -313,7 +355,7 @@ export default function App() {
           )}
 
           {/* Bottom: Session drawer */}
-          <div className="border-t border-hw-400/20">
+          <div style={{ borderTop: '1px solid var(--divider)' }}>
             <SessionDrawer
               sessions={sessions}
               currentSessionId={currentSessionId}
@@ -326,7 +368,12 @@ export default function App() {
               isSaving={isSaving}
               isExporting={isExporting}
               hasRecordedTracks={hasRecordedTracks}
-            />
+              skin={skin}
+              onSetSkin={setSkin}
+              machinePicker={machinePicker}
+            >
+              {!isLooperMode && <ShortcutLegend />}
+            </SessionDrawer>
           </div>
         </div>
 

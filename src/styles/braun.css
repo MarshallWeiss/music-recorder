@@ -1,0 +1,268 @@
+/* Braun TG 60: a white gallery wall, the machine, and a neutral bar for everything that is not on it */
+
+.braun-room {
+  --room: #e9e7e1;
+  --bar-ink: #2e2e2b;
+  min-height: 100vh;
+  min-height: 100dvh;
+  display: flex;
+  flex-direction: column;
+  background: radial-gradient(ellipse at 50% 30%, #f4f3ee, var(--room) 70%);
+  color: var(--bar-ink);
+  font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+}
+
+.braun-room--graphite {
+  --room: #d9d7d1;
+}
+
+.braun-stage {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: clamp(8px, 2vw, 28px);
+}
+
+.braun-device {
+  display: block;
+  width: 100%;
+  height: 100%;
+  max-height: calc(100dvh - 150px);
+  filter: drop-shadow(0 22px 30px rgba(40, 36, 28, 0.3)) drop-shadow(0 4px 6px rgba(40, 36, 28, 0.32));
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+.tg-base {
+  fill: #f3f1eb;
+  stroke: rgba(0, 0, 0, 0.18);
+  stroke-width: 0.3;
+}
+
+.braun-room--graphite .tg-base {
+  fill: #3b3c3b;
+}
+
+/* Lettering: lowercase grotesque, as on the machine */
+.tg-label,
+.tg-scale,
+.tg-tiny {
+  font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+  fill: #3a3a37;
+}
+
+.tg-label {
+  font-size: 3.7px;
+  letter-spacing: 0.05px;
+}
+
+.tg-scale {
+  font-size: 3.3px;
+  fill: #55554f;
+}
+
+.tg-scale.is-current {
+  fill: #1c1c1a;
+  font-weight: 600;
+}
+
+.tg-tiny {
+  font-size: 2.6px;
+  fill: #6a6a64;
+}
+
+.tg-counter {
+  font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+  font-size: 6.2px;
+  font-weight: 500;
+  fill: #1f1f1d;
+}
+
+.tg-logo {
+  /* Black artwork on the pale label: multiply drops any white background in the file */
+  mix-blend-mode: multiply;
+}
+
+.tg-reel-flange {
+  fill: #4e504d;
+  stroke: rgba(0, 0, 0, 0.55);
+  stroke-width: 0.35;
+}
+
+.tg-reel-shadow {
+  fill: rgba(0, 0, 0, 0.42);
+  transform: translate(3.2px, 4.6px);
+  filter: url(#tg-soft);
+}
+
+.tg-control {
+  cursor: pointer;
+  outline: none;
+}
+
+.tg-control:focus-visible {
+  outline: 0.6px solid #1e5a8a;
+  outline-offset: 1.5px;
+}
+
+.tg-lever {
+  transition: transform 140ms cubic-bezier(0.3, 1.4, 0.5, 1);
+}
+
+.tg-roller-arm {
+  transition: transform 110ms ease-out;
+}
+
+.tg-key-cap {
+  fill: url(#tg-keycap);
+  stroke: rgba(0, 0, 0, 0.45);
+  stroke-width: 0.3;
+}
+
+/* A touched key sinks a fraction of a millimetre */
+.tg-key:active {
+  transform: translate(0.2px, 0.45px);
+}
+
+/* The lamp behind a latched key shows through the milky plastic */
+.tg-key-glow {
+  fill: #ffe9a8;
+  opacity: 0.85;
+  filter: url(#tg-soft);
+}
+
+.tg-record-dot {
+  fill: #d86a3a;
+}
+
+.tg-key.is-lit .tg-record-dot {
+  fill: #ff5a1f;
+  filter: drop-shadow(0 0 1.6px rgba(255, 90, 31, 0.9));
+}
+
+.tg-lamp {
+  fill: #3a2620;
+  stroke: rgba(0, 0, 0, 0.5);
+  stroke-width: 0.3;
+  transition: fill 300ms;
+}
+
+.tg-lamp.is-on {
+  fill: #ff8a4a;
+}
+
+/* The bar: plain interface, deliberately not part of the object */
+.machine-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px 18px;
+  padding: 12px clamp(12px, 2.4vw, 28px);
+  border-top: 1px solid rgba(0, 0, 0, 0.1);
+  background: rgba(255, 255, 255, 0.5);
+  font-size: 13px;
+}
+
+.machine-bar-group,
+.machine-picker {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.machine-bar-group > span:first-child,
+.machine-picker > span {
+  color: rgba(46, 46, 43, 0.62);
+}
+
+.machine-picker select {
+  padding: 6px 28px 6px 10px;
+  border: 1px solid rgba(0, 0, 0, 0.22);
+  border-radius: 4px;
+  background: #fff;
+  color: #2e2e2b;
+  font: inherit;
+}
+
+.machine-bar-segments {
+  display: flex;
+  border: 1px solid rgba(0, 0, 0, 0.22);
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.machine-bar-segments button {
+  padding: 6px 11px;
+  background: #fff;
+  color: #2e2e2b;
+  font: inherit;
+}
+
+.machine-bar-segments button + button {
+  border-left: 1px solid rgba(0, 0, 0, 0.16);
+}
+
+.machine-bar-segments button[aria-pressed='true'] {
+  background: #2e2e2b;
+  color: #fff;
+}
+
+.machine-bar-range {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+}
+
+.machine-bar-range small {
+  font-size: 12px;
+  color: rgba(46, 46, 43, 0.62);
+}
+
+.machine-bar-range input {
+  width: 110px;
+  accent-color: #2e2e2b;
+}
+
+.machine-bar-status {
+  flex: 1 1 0;
+  min-width: 0;
+  margin: 0;
+  color: rgba(46, 46, 43, 0.75);
+}
+
+.machine-bar-button {
+  padding: 7px 13px;
+  border: 1px solid rgba(0, 0, 0, 0.28);
+  border-radius: 4px;
+  background: #fff;
+  color: #2e2e2b;
+  font: inherit;
+}
+
+.machine-bar-button:disabled {
+  opacity: 0.45;
+}
+
+/* The same picker inside the Porta Four's own bottom bar */
+.session-bar .machine-picker {
+  margin-left: 12px;
+  font: 700 12px/1 'Barlow Condensed', 'Helvetica Neue', Helvetica, Arial, sans-serif;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+.session-bar .machine-picker > span {
+  color: var(--silk);
+}
+
+.session-bar .machine-picker select {
+  padding: 4px 22px 4px 8px;
+  border-radius: 2px;
+  background: linear-gradient(180deg, #c0b8a8 0%, #a8a090 100%);
+  color: rgba(20, 15, 5, 0.7);
+  text-transform: none;
+  letter-spacing: 0.04em;
+  font-weight: 600;
+}
